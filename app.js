@@ -9,6 +9,8 @@ function app() {
     clinics: [], rules: [], leaves: [], extras: [], overrides: [], logs: [], invoices: [],
     profile: { full_name: '', reg_no: '', address: '', phone: '', email: '', bank_name: '', account_name: '', account_no: '', fps_id: '', signature: '', footer_note: '' },
     result: { sessions: [], skipped: [], summary: null },
+    adj: { sessions: [], skipped: [] },          // 前後一個月,只供月曆顯示
+    calSel: Calc2.today(),
     recDate: Calc2.today(), recAll: false, recForm: {}, dayLogs: [],
     issueDate: Calc2.today(), remLang: 'both',
     newClinic: { code: '', name: '', hourly_rate: '' },
@@ -39,6 +41,7 @@ function app() {
       await db.auth.signOut();
       this.clinics = []; this.logs = []; this.invoices = [];
       this.result = { sessions: [], skipped: [], summary: null };
+      this.adj = { sessions: [], skipped: [] };
     },
 
     // ---------- 資料 ----------
@@ -71,10 +74,22 @@ function app() {
                   overrides: this.overrides, holidays: HK_HOLIDAYS, logs: this.logs };
       const g = Calc.generateMonth(this.y, this.m, D);
       this.result = { ...g, summary: Calc2.summarize(g.sessions, D, this.y, this.m) };
+
+      // 前後一個月:只畫月曆,不入總覽 / invoice 計算
+      const nb = n => {
+        const t = this.y * 12 + (this.m - 1) + n;
+        return Calc.generateMonth(Math.floor(t / 12), (t % 12) + 1, D);
+      };
+      const p = nb(-1), q = nb(1);
+      this.adj = { sessions: [...p.sessions, ...q.sessions], skipped: [...p.skipped, ...q.skipped] };
     },
     async shift(n) {
       let t = this.y * 12 + (this.m - 1) + n;
       this.y = Math.floor(t / 12); this.m = (t % 12) + 1;
+      // 月曆選中日子:當月有今日就揀今日,否則揀 1 號
+      const pre = this.y + '-' + String(this.m).padStart(2, '0') + '-';
+      const today = Calc2.today();
+      this.calSel = today.startsWith(pre) ? today : pre + '01';
       const key = this.y + '-' + this.m;
       const r = await this.fetchLogs();
       if (key !== this.y + '-' + this.m) return;     // 期間又撳咗第二次,放棄舊結果
@@ -151,7 +166,11 @@ function app() {
     },
     quickCancel(s) { if (confirm('取消這一節?')) this.add('overrides', { date: s.date, clinic_id: s.clinic_id, block: s.block, action: 'cancel' }); },
     quickWork(s) { this.add('overrides', { date: s.date, clinic_id: s.clinic_id, block: s.block, action: 'work' }); },
-    restore(id) { this.del('overrides', id); },
+    async restore(id) {                              // 還原 / 復原:直接刪除 override,唔再彈確認
+      const { error } = await db.from('overrides').delete().eq('id', id);
+      if (error) return this.fail(error);
+      await this.load();
+    },
 
     // ---------- 每日記錄 ----------
     recClinics() {
@@ -281,6 +300,58 @@ function app() {
       };
       img.onerror = () => this.err = '圖片讀取失敗';
       img.src = url;
+    },
+
+    // ---------- 月曆 ----------
+    _fmt(d) {
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    },
+    _calCtx() {
+      return {
+        S: [...(this.result.sessions || []), ...this.adj.sessions],
+        K: [...(this.result.skipped || []), ...this.adj.skipped],
+        logged: new Set(this.logs.map(l => l.date + '|' + l.clinic_id)),
+        miss: new Set(((this.result.summary || {}).missing || []).map(s => s.date + '|' + s.clinic_id)),
+        today: Calc2.today()
+      };
+    },
+    _cell(d, x) {
+      const ds = this._fmt(d);
+      const sessions = x.S.filter(s => s.date === ds);
+      const skipped = x.K.filter(s => s.date === ds);
+      const hol = skipped.find(s => s.why === 'holiday');
+      return {
+        date: ds, day: d.getDate(), dow: d.getDay(),
+        inMonth: d.getMonth() === this.m - 1 && d.getFullYear() === this.y,
+        isToday: ds === x.today,
+        holiday: hol ? hol.reason : '',
+        sessions, skipped,
+        chips: sessions.map(s => {
+          const k = ds + '|' + s.clinic_id;
+          return { code: this.cl(s.clinic_id), mark: x.miss.has(k) ? '!' : (x.logged.has(k) ? '✓' : '') };
+        })
+      };
+    },
+    calCells() {
+      const first = new Date(this.y, this.m - 1, 1);
+      const daysInMonth = new Date(this.y, this.m, 0).getDate();
+      const weeks = Math.ceil((first.getDay() + daysInMonth) / 7);
+      const x = this._calCtx();
+      const cells = [];
+      for (let i = 0; i < weeks * 7; i++) {
+        cells.push(this._cell(new Date(this.y, this.m - 1, 1 - first.getDay() + i), x));
+      }
+      return cells;
+    },
+    selCell() {
+      if (!this.calSel) return null;
+      return this._cell(new Date(this.calSel + 'T00:00:00'), this._calCtx());
+    },
+    async calToday() {
+      const n = new Date();
+      const diff = (n.getFullYear() - this.y) * 12 + (n.getMonth() + 1 - this.m);
+      if (diff) await this.shift(diff);
+      this.calSel = this._fmt(n);
     },
 
     // ---------- 顯示用 ----------
