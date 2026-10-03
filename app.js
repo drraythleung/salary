@@ -7,9 +7,11 @@ function app() {
     email: '', password: '',
     y: new Date().getFullYear(), m: new Date().getMonth() + 1,
     clinics: [], rules: [], leaves: [], extras: [], overrides: [], logs: [], invoices: [],
+    att: [], attOk: true,                          // 返工標記
     profile: { full_name: '', reg_no: '', address: '', phone: '', email: '', bank_name: '', account_name: '', account_no: '', fps_id: '', signature: '', footer_note: '' },
     result: { sessions: [], skipped: [], summary: null },
-    adj: { sessions: [], skipped: [] },          // 前後一個月,只供月曆顯示
+    adj: { sessions: [], skipped: [] },            // 前後一個月,只供月曆顯示
+    cells: [], calSum: { proj: 0 },
     calSel: Calc2.today(),
     recDate: Calc2.today(), recAll: false, recForm: {}, dayLogs: [],
     issueDate: Calc2.today(), remLang: 'both',
@@ -39,7 +41,7 @@ function app() {
     },
     async signOut() {
       await db.auth.signOut();
-      this.clinics = []; this.logs = []; this.invoices = [];
+      this.clinics = []; this.logs = []; this.invoices = []; this.att = []; this.cells = [];
       this.result = { sessions: [], skipped: [], summary: null };
       this.adj = { sessions: [], skipped: [] };
     },
@@ -56,13 +58,16 @@ function app() {
       const res = await Promise.all([
         q('clinics', 'sort'), q('schedule_rules', 'weekday'), q('leaves', 'start_date'),
         q('extra_sessions', 'date'), q('overrides', 'date'), q('invoices', 'invoice_no'),
-        db.from('profile').select('*').maybeSingle(), this.fetchLogs()
+        db.from('profile').select('*').maybeSingle(), this.fetchLogs(),
+        db.from('attendance').select('*')
       ]);
-      const bad = res.find(x => x.error);
+      const bad = res.slice(0, 8).find(x => x.error);
       if (bad) return this.fail(bad.error);
       [this.clinics, this.rules, this.leaves, this.extras, this.overrides, this.invoices] = res.slice(0, 6).map(x => x.data);
       if (res[6].data) this.profile = { ...this.profile, ...res[6].data };
       this.logs = res[7].data;
+      this.attOk = !res[8].error;                  // 未建表唔會令成個 app 失敗
+      this.att = this.attOk ? res[8].data : [];
       const first = this.clinics[0]?.id || '';
       for (const f of [this.ruleForm, this.extraForm]) if (!f.clinic_id) f.clinic_id = first;
       this.recForm = Object.fromEntries(this.clinics.map(c => [c.id, { consult: '', proc: '' }]));
@@ -82,11 +87,11 @@ function app() {
       };
       const p = nb(-1), q = nb(1);
       this.adj = { sessions: [...p.sessions, ...q.sessions], skipped: [...p.skipped, ...q.skipped] };
+      this.buildCal();
     },
     async shift(n) {
       let t = this.y * 12 + (this.m - 1) + n;
       this.y = Math.floor(t / 12); this.m = (t % 12) + 1;
-      // 月曆選中日子:當月有今日就揀今日,否則揀 1 號
       const pre = this.y + '-' + String(this.m).padStart(2, '0') + '-';
       const today = Calc2.today();
       this.calSel = today.startsWith(pre) ? today : pre + '01';
@@ -96,6 +101,8 @@ function app() {
       if (r.error) return this.fail(r.error);
       this.logs = r.data;
       this.recompute();
+      this.recDate = this.calSel;
+      await this.loadRec();
     },
     fail(e) { this.err = e.message || String(e); return false; },
     flash(t) { this.ok = t; setTimeout(() => this.ok = '', 2000); },
@@ -166,11 +173,7 @@ function app() {
     },
     quickCancel(s) { if (confirm('取消這一節?')) this.add('overrides', { date: s.date, clinic_id: s.clinic_id, block: s.block, action: 'cancel' }); },
     quickWork(s) { this.add('overrides', { date: s.date, clinic_id: s.clinic_id, block: s.block, action: 'work' }); },
-    async restore(id) {                              // 還原 / 復原:直接刪除 override,唔再彈確認
-      const { error } = await db.from('overrides').delete().eq('id', id);
-      if (error) return this.fail(error);
-      await this.load();
-    },
+    restore(id) { this.del('overrides', id); },
 
     // ---------- 每日記錄 ----------
     recClinics() {
@@ -222,6 +225,150 @@ function app() {
     monthLogs() {
       const p = `${this.y}-${String(this.m).padStart(2, '0')}-`;
       return this.logs.filter(l => l.date.startsWith(p)).sort((a, b) => b.date.localeCompare(a.date));
+    },
+
+    // ---------- 月曆 ----------
+    _fmt(d) {
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    },
+    _share(c, consult, proc) {                     // 分成 = 診金×% + 小手術×%(小手術 % 未設定當 0)
+      return (+consult || 0) * (+c.consult_pct || 0) / 100 + (+proc || 0) * (+c.procedure_pct || 0) / 100;
+    },
+    buildCal() {
+      const pad = n => String(n).padStart(2, '0');
+      const ms = `${this.y}-${pad(this.m)}-01`;
+      const today = Calc2.today();
+      const rows = (this.result.summary && this.result.summary.rows) || [];
+
+      // 每間診所「每個返工日」的分成估算
+      const est = {};
+      for (const c of this.clinics) {
+        const row = rows.find(r => r.clinic.id === c.id);
+        let ec = +c.est_consult_per_day || 0, ep = +c.est_procedure_per_day || 0;
+        if (row && row.src === 'avg') {
+          const ls = this.logs.filter(l => l.clinic_id === c.id && l.date < ms);
+          if (ls.length) {
+            ec = ls.reduce((a, l) => a + (+l.consult_total || 0), 0) / ls.length;
+            ep = ls.reduce((a, l) => a + (+l.procedure_total || 0), 0) / ls.length;
+          }
+        }
+        est[c.id] = this._share(c, ec, ep);
+      }
+
+      const S = [...(this.result.sessions || []), ...this.adj.sessions];
+      const K = [...(this.result.skipped || []), ...this.adj.skipped];
+      const logMap = new Map(this.logs.map(l => [l.date + '|' + l.clinic_id, l]));
+      const attSet = new Set(this.att.map(a => a.date + '|' + a.clinic_id));
+
+      const first = new Date(this.y, this.m - 1, 1);
+      const dim = new Date(this.y, this.m, 0).getDate();
+      const weeks = Math.ceil((first.getDay() + dim) / 7);
+      const cells = []; let proj = 0;
+
+      for (let i = 0; i < weeks * 7; i++) {
+        const d = new Date(this.y, this.m - 1, 1 - first.getDay() + i);
+        const ds = this._fmt(d);
+        const ss = S.filter(s => s.date === ds), kk = K.filter(k => k.date === ds);
+        const hol = kk.find(k => k.why === 'holiday');
+
+        const ent = {};
+        const get = id => ent[id] || (ent[id] = {
+          clinic_id: id, date: ds, code: this.cl(id), name: this.clinicOf(id).name || this.cl(id),
+          sessions: [], offIds: [], hours: 0, base: 0, regular: false
+        });
+        ss.forEach(s => {
+          const e = get(s.clinic_id);
+          e.sessions.push(s); e.hours += +s.hours || 0; e.base += +s.base || 0;
+          if (s.kind === 'regular') e.regular = true;
+        });
+        kk.filter(k => k.why === 'cancel').forEach(k => {
+          const e = get(k.clinic_id);
+          if (k.ov_id && !e.offIds.includes(k.ov_id)) e.offIds.push(k.ov_id);
+        });
+
+        const list = Object.values(ent);
+        list.forEach(e => {
+          const c = this.clinicOf(e.clinic_id);
+          const log = logMap.get(ds + '|' + e.clinic_id);
+          e.off = e.sessions.length === 0;                       // 全部節數都被取消
+          e.log = !!log;
+          e.worked = attSet.has(ds + '|' + e.clinic_id);
+          e.estShare = (e.regular && !e.off) ? (est[e.clinic_id] || 0) : 0;
+          e.budget = e.off ? 0 : e.base + e.estShare;
+          if (e.off) e.actual = null;
+          else if (e.regular) e.actual = log ? e.base + this._share(c, log.consult_total, log.procedure_total) : null;
+          else e.actual = ds <= today ? e.base : null;           // 加節/特更:冇分成,過咗日就等於時薪/固定金額
+          e.diff = e.actual == null ? null : e.actual - e.budget;
+          e.missing = !e.off && e.regular && !e.log && ds < today;
+        });
+
+        const live = list.filter(e => !e.off);
+        const done = live.filter(e => e.actual != null);
+        const cellProj = live.reduce((a, e) => a + (e.actual != null ? e.actual : e.budget), 0);
+        const inMonth = d.getMonth() === this.m - 1 && d.getFullYear() === this.y;
+        if (inMonth) proj += cellProj;
+
+        cells.push({
+          date: ds, day: d.getDate(), dow: d.getDay(), inMonth,
+          isToday: ds === today,
+          holiday: hol ? hol.reason : '',
+          other: kk.filter(k => k.why !== 'cancel'),
+          entries: list,
+          budget: live.reduce((a, e) => a + e.budget, 0),
+          hasActual: done.length > 0,
+          actual: done.reduce((a, e) => a + e.actual, 0),
+          diff: done.reduce((a, e) => a + e.diff, 0),
+          mark: !list.length ? '' : (!live.length ? 'no' : (live.every(e => e.worked) ? 'yes' : (live.some(e => e.worked) ? 'part' : '')))
+        });
+      }
+      this.cells = cells;
+      this.calSum = { proj };
+    },
+    calCells() { return this.cells; },
+    selCell() { return this.cells.find(c => c.date === this.calSel) || null; },
+    async selectDay(ds) {
+      this.calSel = ds;
+      this.recDate = ds;
+      await this.loadRec();
+    },
+    async calToday() {
+      const n = new Date();
+      const diff = (n.getFullYear() - this.y) * 12 + (n.getMonth() + 1 - this.m);
+      if (diff) await this.shift(diff);
+      await this.selectDay(this._fmt(n));
+    },
+
+    // ---------- 返工標記 ----------
+    async reloadAtt() {
+      const r = await db.from('attendance').select('*');
+      if (r.error) return this.fail(r.error);
+      this.att = r.data; this.attOk = true; this.buildCal();
+    },
+    async toggleWork(e) {                           // 有返工 ⇄ 未標記
+      if (!this.attOk) return this.err = '未建立 attendance 表,請先在 Supabase 執行 SQL';
+      const ex = this.att.find(a => a.date === e.date && a.clinic_id === e.clinic_id);
+      const r = ex
+        ? await db.from('attendance').delete().eq('id', ex.id)
+        : await db.from('attendance').insert({ clinic_id: e.clinic_id, date: e.date });
+      if (r.error) return this.fail(r.error);
+      await this.reloadAtt();
+    },
+    async markOff(e) {                              // 冇返工 = 取消當日所有固定節數(預算扣除)
+      const rows = e.sessions.filter(s => s.kind === 'regular')
+        .map(s => ({ date: s.date, clinic_id: s.clinic_id, block: s.block, action: 'cancel' }));
+      if (!rows.length) return this.err = '呢個係加節/特更,請用「刪除」';
+      if (!confirm('標記為冇返工?呢日呢間診所會由預算扣除(可隨時復原)。')) return;
+      const ex = this.att.find(a => a.date === e.date && a.clinic_id === e.clinic_id);
+      if (ex) { const r = await db.from('attendance').delete().eq('id', ex.id); if (r.error) return this.fail(r.error); }
+      const { error } = await db.from('overrides').insert(rows);
+      if (error) return this.fail(error);
+      await this.load();
+    },
+    async undoOff(e) {                              // 復原冇返工(刪走取消的 override)
+      if (!e.offIds.length) return;
+      const { error } = await db.from('overrides').delete().in('id', e.offIds);
+      if (error) return this.fail(error);
+      await this.load();
     },
 
     // ---------- Invoice ----------
@@ -302,60 +449,10 @@ function app() {
       img.src = url;
     },
 
-    // ---------- 月曆 ----------
-    _fmt(d) {
-      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    },
-    _calCtx() {
-      return {
-        S: [...(this.result.sessions || []), ...this.adj.sessions],
-        K: [...(this.result.skipped || []), ...this.adj.skipped],
-        logged: new Set(this.logs.map(l => l.date + '|' + l.clinic_id)),
-        miss: new Set(((this.result.summary || {}).missing || []).map(s => s.date + '|' + s.clinic_id)),
-        today: Calc2.today()
-      };
-    },
-    _cell(d, x) {
-      const ds = this._fmt(d);
-      const sessions = x.S.filter(s => s.date === ds);
-      const skipped = x.K.filter(s => s.date === ds);
-      const hol = skipped.find(s => s.why === 'holiday');
-      return {
-        date: ds, day: d.getDate(), dow: d.getDay(),
-        inMonth: d.getMonth() === this.m - 1 && d.getFullYear() === this.y,
-        isToday: ds === x.today,
-        holiday: hol ? hol.reason : '',
-        sessions, skipped,
-        chips: sessions.map(s => {
-          const k = ds + '|' + s.clinic_id;
-          return { code: this.cl(s.clinic_id), mark: x.miss.has(k) ? '!' : (x.logged.has(k) ? '✓' : '') };
-        })
-      };
-    },
-    calCells() {
-      const first = new Date(this.y, this.m - 1, 1);
-      const daysInMonth = new Date(this.y, this.m, 0).getDate();
-      const weeks = Math.ceil((first.getDay() + daysInMonth) / 7);
-      const x = this._calCtx();
-      const cells = [];
-      for (let i = 0; i < weeks * 7; i++) {
-        cells.push(this._cell(new Date(this.y, this.m - 1, 1 - first.getDay() + i), x));
-      }
-      return cells;
-    },
-    selCell() {
-      if (!this.calSel) return null;
-      return this._cell(new Date(this.calSel + 'T00:00:00'), this._calCtx());
-    },
-    async calToday() {
-      const n = new Date();
-      const diff = (n.getFullYear() - this.y) * 12 + (n.getMonth() + 1 - this.m);
-      if (diff) await this.shift(diff);
-      this.calSel = this._fmt(n);
-    },
-
     // ---------- 顯示用 ----------
     money(n) { return 'HK$ ' + Math.round(n || 0).toLocaleString('en-US'); },
+    kfmt(n) { n = Math.round(n || 0); return Math.abs(n) >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n); },
+    signed(n) { n = Math.round(n || 0); return (n >= 0 ? '+' : '−') + Math.abs(n).toLocaleString('en-US'); },
     cl(id) { const c = this.clinics.find(x => x.id === id); return c ? c.code : '?'; },
     blk(b) { return ({ am: '上午', pm: '下午', all: '全日' })[b] || ''; },
     wk(i) { return '日一二三四五六'[i]; },
