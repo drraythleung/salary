@@ -59,10 +59,13 @@
     </template>
   </nav>
 
-  <!-- ========== 總覽 ========== -->
+ <!-- ========== 總覽 ========== -->
   <section x-show="tab==='home'" class="p-3 space-y-3">
     <div x-show="clinics.length===0" class="bg-yellow-50 border border-yellow-300 rounded p-3 text-sm">
-      未有診所資料。請執行 Phase 1 Step 3 的 SQL,或到「診所」頁新增。
+      未有診所資料。請到「診所」頁新增。
+    </div>
+    <div x-show="!attOk" class="bg-yellow-50 border border-yellow-300 rounded p-2 text-xs">
+      ⚠ 未建立 attendance 表,「有返工」標記暫時用唔到。請先喺 Supabase 執行 SQL。
     </div>
 
     <div x-show="overdueList().length" @click="tab='inv'" class="bg-red-100 text-red-700 rounded p-2 text-sm cursor-pointer">
@@ -99,68 +102,134 @@
             </template>
           </div>
           <div class="grid grid-cols-7 gap-px bg-slate-200 rounded-lg overflow-hidden">
-            <template x-for="c in calCells()" :key="c.date">
-              <button type="button" @click="calSel = c.date"
-                      class="bg-white min-h-[64px] p-1 text-left align-top flex flex-col items-stretch"
+            <template x-for="c in cells" :key="c.date">
+              <button type="button" @click="selectDay(c.date)"
+                      class="bg-white min-h-[76px] p-1 text-left flex flex-col gap-px"
                       :class="[c.inMonth ? '' : 'opacity-40', calSel===c.date ? 'ring-2 ring-inset ring-blue-500' : '']">
-                <span class="text-xs leading-none inline-flex items-center justify-center w-5 h-5 rounded-full"
-                      :class="[c.isToday ? 'bg-blue-600 text-white' : ((c.holiday || c.dow===0) ? 'text-red-500' : 'text-slate-700')]"
-                      x-text="c.day"></span>
+                <div class="flex justify-between items-start">
+                  <span class="text-xs leading-none inline-flex items-center justify-center w-5 h-5 rounded-full"
+                        :class="c.isToday ? 'bg-blue-600 text-white' : ((c.holiday || c.dow===0) ? 'text-red-500' : 'text-slate-700')"
+                        x-text="c.day"></span>
+                  <span class="text-[11px] leading-none"
+                        :class="c.mark==='yes' ? 'text-green-600' : (c.mark==='no' ? 'text-red-500' : 'text-amber-500')"
+                        x-text="c.mark==='yes' ? '✔' : (c.mark==='no' ? '✖' : (c.mark==='part' ? '◐' : ''))"></span>
+                </div>
                 <span x-show="c.holiday" class="text-[9px] leading-tight text-red-500 truncate" x-text="c.holiday"></span>
-                <template x-for="(ch,i) in c.chips" :key="i">
-                  <span class="text-[10px] leading-tight rounded px-0.5 mt-0.5 bg-blue-50 text-blue-700 truncate"
-                        :class="ch.mark==='!' ? 'bg-orange-100 text-orange-700' : ''">
-                    <span x-text="ch.code"></span><span x-text="ch.mark"></span>
+                <span x-show="c.budget>0" class="text-[10px] leading-tight text-slate-500">預 <span x-text="kfmt(c.budget)"></span></span>
+                <span x-show="c.hasActual" class="text-[10px] leading-tight font-medium"
+                      :class="c.diff>=0 ? 'text-green-600' : 'text-red-600'">實 <span x-text="kfmt(c.actual)"></span></span>
+                <template x-for="e in c.entries" :key="e.clinic_id">
+                  <span class="text-[10px] leading-tight rounded px-0.5 truncate"
+                        :class="e.off ? 'bg-slate-100 text-slate-400 line-through' : (e.missing ? 'bg-orange-100 text-orange-700' : 'bg-blue-50 text-blue-700')">
+                    <span x-text="e.code"></span><span x-text="e.log ? '✓' : (e.missing ? '!' : '')"></span>
                   </span>
                 </template>
               </button>
             </template>
           </div>
-          <div class="text-[11px] text-slate-400 mt-1">✓ 已記錄 · ! 未填 · 灰色為鄰月日子(不計入本月總額)</div>
+          <div class="text-[11px] text-slate-400 mt-1">
+            預=預算 · 實=實際(綠=高過預算,紅=低過預算) · ✔有返工 ✖冇返工 ◐部分 · ✓已記錄 !未填 · 灰色為鄰月
+          </div>
+          <div class="text-[11px] text-slate-400">
+            月曆合計 <span x-text="money(calSum.proj)"></span>(有實際用實際,否則用預算)
+            <span x-show="Math.abs(calSum.proj - result.summary.total) > 1" class="text-orange-600">
+              · 同上面總額相差 <span x-text="money(Math.abs(calSum.proj - result.summary.total))"></span>
+            </span>
+          </div>
         </div>
 
         <!-- 選中日子 -->
         <template x-if="selCell()">
-          <div class="card p-3 text-sm space-y-2">
+          <div class="card p-3 text-sm space-y-3">
             <div class="font-bold">
               <span x-text="dlabel(selCell().date)"></span>
               <span x-show="selCell().holiday" class="text-red-500 font-normal text-xs ml-1" x-text="selCell().holiday"></span>
             </div>
 
-            <template x-for="(s,i) in selCell().sessions" :key="'ss'+i">
-              <div class="flex items-center justify-between border-b pb-1">
-                <div>
-                  <span x-text="clinicOf(s.clinic_id).name || cl(s.clinic_id)"></span>
-                  <span class="text-slate-500 ml-1" x-text="blk(s.block)"></span>
-                  <span x-show="s.kind==='extra'" class="ml-1 text-xs bg-green-100 text-green-700 rounded px-1">加節</span>
-                  <span x-show="s.kind==='special'" class="ml-1 text-xs bg-purple-100 text-purple-700 rounded px-1">特更</span>
-                  <span x-show="s.ov_id" class="ml-1 text-xs bg-yellow-100 text-yellow-700 rounded px-1">已調整</span>
+            <template x-for="e in selCell().entries" :key="e.clinic_id">
+              <div class="border rounded-lg p-2 space-y-2" :class="e.off ? 'bg-slate-50' : ''">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <b x-text="e.name"></b>
+                    <template x-for="(s,i) in e.sessions" :key="i">
+                      <span class="ml-1 text-xs text-slate-500">
+                        <span x-text="blk(s.block)"></span>
+                        <span x-show="s.kind==='extra'" class="bg-green-100 text-green-700 rounded px-1">加節</span>
+                        <span x-show="s.kind==='special'" class="bg-purple-100 text-purple-700 rounded px-1">特更</span>
+                      </span>
+                    </template>
+                  </div>
+                  <span x-show="!e.off" class="text-xs text-slate-500"><span x-text="e.hours"></span> 小時</span>
                 </div>
-                <div class="text-right whitespace-nowrap text-xs">
-                  <span class="text-slate-500" x-text="s.hours + 'h'"></span>
-                  <span x-text="money(s.base)"></span>
-                  <button @click="goRec(s.date, s.clinic_id)" class="ml-2 text-blue-600">記錄</button>
-                  <button x-show="s.kind==='regular'" @click="quickCancel(s)" class="ml-2 text-red-600">取消</button>
-                  <button x-show="s.ov_id" @click="restore(s.ov_id)" class="ml-2 text-blue-600">還原</button>
-                  <button x-show="s.extra_id" @click="del('extra_sessions', s.extra_id)" class="ml-2 text-red-600">刪除</button>
-                </div>
+
+                <!-- 冇返工 -->
+                <template x-if="e.off">
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="text-red-600">✖ 冇返工(已由預算扣除)</span>
+                    <button @click="undoOff(e)" class="text-blue-600">復原</button>
+                  </div>
+                </template>
+
+                <template x-if="!e.off">
+                  <div class="space-y-2">
+                    <!-- 1. 預算 -->
+                    <div class="flex justify-between">
+                      <span class="text-slate-500">預算</span>
+                      <span><b x-text="money(e.budget)"></b>
+                        <span class="text-xs text-slate-400">(時薪/特更 <span x-text="money(e.base)"></span>
+                          <template x-if="e.estShare>0"><span>＋分成估算 <span x-text="money(e.estShare)"></span></span></template>)</span>
+                      </span>
+                    </div>
+
+                    <!-- 2. 實際 -->
+                    <template x-if="e.regular && recForm[e.clinic_id]">
+                      <div class="grid grid-cols-2 gap-2">
+                        <label class="text-xs">當日診金總額<input type="number" inputmode="decimal" x-model="recForm[e.clinic_id].consult" class="inp"></label>
+                        <label class="text-xs">當日小手術總額<input type="number" inputmode="decimal" x-model="recForm[e.clinic_id].proc" class="inp"></label>
+                      </div>
+                    </template>
+                    <div class="flex justify-between">
+                      <span class="text-slate-500">實際</span>
+                      <span x-show="e.actual==null" class="text-slate-400 text-xs">未填記錄</span>
+                      <span x-show="e.actual!=null">
+                        <b x-text="money(e.actual)"></b>
+                        <span class="text-xs ml-1" :class="e.diff>=0 ? 'text-green-600' : 'text-red-600'"
+                              x-text="(e.diff>=0 ? '多過預算 ' : '少過預算 ') + money(Math.abs(e.diff))"></span>
+                      </span>
+                    </div>
+                    <div x-show="e.regular && clinicOf(e.clinic_id).procedure_pct==null" class="text-xs text-orange-600">小手術 % 待定:先記低金額,設定 % 後會自動計入。</div>
+
+                    <!-- 3. 返工 -->
+                    <div class="flex flex-wrap gap-2 pt-1 border-t">
+                      <button @click="toggleWork(e)" class="px-3 py-1 rounded-lg text-xs border"
+                              :class="e.worked ? 'bg-green-600 text-white border-green-600' : 'bg-white text-green-700 border-green-600'">
+                        ✔ 有返工
+                      </button>
+                      <button x-show="e.regular" @click="markOff(e)" class="px-3 py-1 rounded-lg text-xs border bg-white text-red-600 border-red-500">
+                        ✖ 冇返工
+                      </button>
+                      <template x-for="s in e.sessions.filter(x => x.extra_id)" :key="s.extra_id">
+                        <button @click="del('extra_sessions', s.extra_id)" class="px-3 py-1 rounded-lg text-xs border bg-white text-red-600 border-red-500">刪除加節</button>
+                      </template>
+                    </div>
+                  </div>
+                </template>
               </div>
             </template>
 
-            <template x-for="(s,i) in selCell().skipped" :key="'sk'+i">
-              <div class="flex items-center justify-between text-xs text-slate-500 border-b pb-1">
-                <div>
-                  <span class="line-through" x-text="(clinicOf(s.clinic_id).name || cl(s.clinic_id)) + ' ' + blk(s.block)"></span>
-                  <span x-text="s.reason"></span>
-                </div>
-                <div>
-                  <button x-show="s.why==='holiday'" @click="quickWork(s)" class="text-blue-600">照常上班</button>
-                  <button x-show="s.why==='cancel'" @click="restore(s.ov_id)" class="text-blue-600">復原</button>
-                </div>
+            <!-- 假期 / 年假等已扣除項目 -->
+            <template x-for="(s,i) in selCell().other" :key="'o'+i">
+              <div class="flex items-center justify-between text-xs text-slate-500">
+                <span><span class="line-through" x-text="(clinicOf(s.clinic_id).name || cl(s.clinic_id)) + ' ' + blk(s.block)"></span>
+                  <span x-text="s.reason"></span></span>
+                <button x-show="s.why==='holiday'" @click="quickWork(s)" class="text-blue-600">照常上班</button>
               </div>
             </template>
 
-            <div x-show="!selCell().sessions.length && !selCell().skipped.length" class="text-slate-400 text-xs">呢日冇排班</div>
+            <div x-show="!selCell().entries.length && !selCell().other.length" class="text-slate-400 text-xs">呢日冇排班</div>
+
+            <button x-show="selCell().entries.some(e => e.regular && !e.off)" @click="saveRec()" class="btn">儲存實際記錄</button>
+            <p class="text-[11px] text-slate-400">兩格都留空再儲存,會刪除該日該診所嘅記錄。只填總數,唔好填病人姓名。</p>
           </div>
         </template>
 
@@ -199,31 +268,6 @@
           </div>
         </div>
       </template>
-    </details>
-
-    <!-- 本月明細 -->
-    <details class="card p-3">
-      <summary class="font-bold text-sm cursor-pointer">本月明細(<span x-text="result.sessions.length"></span> 節)</summary>
-      <template x-for="(s,i) in result.sessions" :key="'s'+i">
-        <div class="flex items-center justify-between py-2 border-b text-sm">
-          <div>
-            <span class="font-medium" x-text="dlabel(s.date)"></span>
-            <span class="ml-1" x-text="cl(s.clinic_id)"></span>
-            <span class="text-slate-500 ml-1" x-text="blk(s.block)"></span>
-            <span x-show="s.kind==='extra'" class="ml-1 text-xs bg-green-100 text-green-700 rounded px-1">加節</span>
-            <span x-show="s.kind==='special'" class="ml-1 text-xs bg-purple-100 text-purple-700 rounded px-1">特更</span>
-            <span x-show="s.ov_id" class="ml-1 text-xs bg-yellow-100 text-yellow-700 rounded px-1">已調整</span>
-          </div>
-          <div class="text-right whitespace-nowrap">
-            <span class="text-slate-500" x-text="s.hours + 'h'"></span>
-            <span x-text="money(s.base)"></span>
-            <button x-show="s.kind==='regular'" @click="quickCancel(s)" class="ml-2 text-red-600">取消</button>
-            <button x-show="s.ov_id" @click="restore(s.ov_id)" class="ml-2 text-blue-600">還原</button>
-            <button x-show="s.extra_id" @click="del('extra_sessions', s.extra_id)" class="ml-2 text-red-600">刪除</button>
-          </div>
-        </div>
-      </template>
-      <div x-show="!result.sessions.length" class="text-sm text-slate-400 py-2">本月冇 session</div>
     </details>
   </section>
 
