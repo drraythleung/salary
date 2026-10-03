@@ -114,9 +114,13 @@
                         :class="c.mark==='yes' ? 'text-green-600' : (c.mark==='no' ? 'text-red-500' : 'text-amber-500')"
                         x-text="c.mark==='yes' ? '✔' : (c.mark==='no' ? '✖' : (c.mark==='part' ? '◐' : ''))"></span>
                 </div>
-                <span x-show="c.holiday" class="text-[9px] leading-tight text-red-500 truncate" x-text="c.holiday"></span>
-                <span x-show="c.budget>0" class="text-[10px] leading-tight text-slate-500">預 <span x-text="kfmt(c.budget)"></span></span>
-                <span x-show="c.hasActual" class="text-[10px] leading-tight font-medium"
+<span x-show="c.holiday" class="text-[9px] leading-tight text-red-500 truncate" x-text="c.holiday"></span>
+<template x-for="l in leaves.filter(l => c.date >= l.start_date && c.date <= (l.end_date || l.start_date))" :key="l.id">
+  <span class="text-[10px] leading-tight rounded px-0.5 truncate bg-emerald-100 text-emerald-700">
+    🌴 年假<span x-show="l.period!=='full'" x-text="l.period==='am' ? '(上午)' : '(下午)'"></span>
+  </span>
+</template>
+<span x-show="c.budget>0" class="text-[10px] leading-tight text-slate-500">預 <span x-text="kfmt(c.budget)"></span></span>                <span x-show="c.hasActual" class="text-[10px] leading-tight font-medium"
                       :class="c.diff>=0 ? 'text-green-600' : 'text-red-600'">實 <span x-text="kfmt(c.actual)"></span></span>
                 <template x-for="e in c.entries" :key="e.clinic_id">
                   <span class="text-[10px] leading-tight rounded px-0.5 truncate"
@@ -144,6 +148,12 @@
             <div class="font-bold">
               <span x-text="dlabel(selCell().date)"></span>
               <span x-show="selCell().holiday" class="text-red-500 font-normal text-xs ml-1" x-text="selCell().holiday"></span>
+            <template x-for="l in leaves.filter(l => selCell().date >= l.start_date && selCell().date <= (l.end_date || l.start_date))" :key="l.id">
+              <span class="bg-emerald-100 text-emerald-700 font-normal text-xs rounded px-1 ml-1">
+                🌴 年假<span x-show="l.period!=='full'" x-text="l.period==='am' ? '(上午)' : '(下午)'"></span>
+                <span x-text="l.reason ? '・' + l.reason : ''"></span>
+              </span>
+            </template>
             </div>
 
             <template x-for="e in selCell().entries" :key="e.clinic_id">
