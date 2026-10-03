@@ -145,7 +145,7 @@
         <input type="date" x-model="recDate" @change="loadRec()" class="border rounded p-1">
         <label class="text-xs"><input type="checkbox" x-model="recAll"> 顯示全部診所</label>
       </div>
-      <template x-for="c in recClinics()" :key="c.id">
+      <template x-for="c in recClinics().filter(x => recForm[x.id])" :key="c.id">
         <div class="border rounded p-2 space-y-1">
           <div class="font-medium" x-text="c.name"></div>
           <div class="grid grid-cols-2 gap-2">
