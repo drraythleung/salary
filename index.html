@@ -14,23 +14,30 @@
 <script defer src="app.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <style>[x-cloak]{display:none!important}</style>
+<style type="text/tailwindcss">
+  @layer components {
+    .card { @apply bg-white rounded-2xl shadow-sm ring-1 ring-slate-200/70; }
+    .inp  { @apply w-full border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500; }
+    .btn  { @apply bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-lg px-4 py-2 text-sm font-medium transition; }
+  }
+</style>
 </head>
 <body class="bg-slate-100 text-slate-800" x-data="app()" x-cloak>
 
 <div x-show="loading" class="text-center mt-24 text-slate-500">載入中…</div>
 
-<!-- 登入 -->
-<div x-show="!loading && !session" class="max-w-sm mx-auto mt-20 p-6 bg-white rounded-xl shadow">
+<!-- ========== 登入 ========== -->
+<div x-show="!loading && !session" class="max-w-sm mx-auto mt-20 p-6 card">
   <h1 class="text-xl font-bold mb-4">🩺 糧單預算</h1>
   <form @submit.prevent="signIn()" class="space-y-3">
-    <input type="email" x-model="email" placeholder="Email" class="w-full border rounded p-2" required>
-    <input type="password" x-model="password" placeholder="密碼" class="w-full border rounded p-2" required>
-    <button class="w-full bg-blue-600 text-white rounded p-2">登入</button>
+    <input type="email" x-model="email" placeholder="Email" class="inp" required>
+    <input type="password" x-model="password" placeholder="密碼" class="inp" required>
+    <button class="btn w-full">登入</button>
   </form>
   <p class="text-red-600 text-sm mt-3" x-text="err"></p>
 </div>
 
-<!-- 主畫面 -->
+<!-- ========== 主畫面 ========== -->
 <div x-show="session" class="max-w-3xl mx-auto pb-24">
   <header class="sticky top-0 z-10 bg-white shadow px-3 py-2 flex items-center justify-between">
     <div class="flex items-center gap-2">
@@ -41,19 +48,24 @@
     <button @click="signOut()" class="text-sm text-slate-500">登出</button>
   </header>
 
-  <div x-show="err" @click="err=''" class="m-3 p-2 bg-red-100 text-red-700 rounded text-sm" x-text="err"></div>
+  <div x-show="err" @click="err=''" class="m-3 p-2 bg-red-100 text-red-700 rounded text-sm cursor-pointer" x-text="err"></div>
   <div x-show="ok" class="m-3 p-2 bg-green-100 text-green-700 rounded text-sm" x-text="ok"></div>
 
   <nav class="flex bg-white border-b text-sm overflow-x-auto whitespace-nowrap">
     <template x-for="t in [['home','總覽'],['rec','記錄'],['inv','Invoice'],['adj','加節/調整'],['leave','年假'],['clinic','診所'],['set','設定']]" :key="t[0]">
-      <button @click="tab=t[0]" :class="tab===t[0] ? 'border-b-2 border-blue-600 text-blue-600 font-bold' : ''" class="px-4 py-2 flex-none" x-text="t[1]"></button>
+      <button @click="tab=t[0]"
+              :class="tab===t[0] ? 'border-b-2 border-blue-600 text-blue-600 font-bold' : ''"
+              class="px-4 py-2 flex-none" x-text="t[1]"></button>
     </template>
   </nav>
 
-  <!-- ========== 總覽 ========== -->
+ <!-- ========== 總覽 ========== -->
   <section x-show="tab==='home'" class="p-3 space-y-3">
     <div x-show="clinics.length===0" class="bg-yellow-50 border border-yellow-300 rounded p-3 text-sm">
-      未有診所資料。請執行 Phase 1 Step 3 的 SQL,或到「診所」頁新增。
+      未有診所資料。請到「診所」頁新增。
+    </div>
+    <div x-show="!attOk" class="bg-yellow-50 border border-yellow-300 rounded p-2 text-xs">
+      ⚠ 未建立 attendance 表,「有返工」標記暫時用唔到。請先喺 Supabase 執行 SQL。
     </div>
 
     <div x-show="overdueList().length" @click="tab='inv'" class="bg-red-100 text-red-700 rounded p-2 text-sm cursor-pointer">
@@ -65,6 +77,7 @@
 
     <template x-if="result.summary">
       <div class="space-y-3">
+        <!-- 本月總額 -->
         <div class="bg-blue-600 text-white rounded-xl p-4">
           <div class="text-sm opacity-80">本月預計收入(未扣稅/MPF)</div>
           <div class="text-3xl font-bold" x-text="money(result.summary.total)"></div>
@@ -77,7 +90,151 @@
           <div x-show="result.summary.pending" class="text-xs mt-1 text-yellow-200">⚠ 部分診所小手術分成 % 未設定,未計入</div>
         </div>
 
-        <div class="bg-white rounded-xl shadow divide-y">
+        <!-- 月曆 -->
+        <div class="card p-3">
+          <div class="flex items-center justify-between mb-2">
+            <div class="font-bold text-sm">📅 月曆</div>
+            <button @click="calToday()" class="text-xs text-blue-600">今日</button>
+          </div>
+          <div class="grid grid-cols-7 text-center text-[11px] mb-1">
+            <template x-for="(w,i) in ['日','一','二','三','四','五','六']" :key="i">
+              <div :class="i===0 ? 'text-red-500' : 'text-slate-500'" x-text="w"></div>
+            </template>
+          </div>
+          <div class="grid grid-cols-7 gap-px bg-slate-200 rounded-lg overflow-hidden">
+            <template x-for="c in cells" :key="c.date">
+              <button type="button" @click="selectDay(c.date)"
+                      class="bg-white min-h-[76px] p-1 text-left flex flex-col gap-px"
+                      :class="[c.inMonth ? '' : 'opacity-40', calSel===c.date ? 'ring-2 ring-inset ring-blue-500' : '']">
+                <div class="flex justify-between items-start">
+                  <span class="text-xs leading-none inline-flex items-center justify-center w-5 h-5 rounded-full"
+                        :class="c.isToday ? 'bg-blue-600 text-white' : ((c.holiday || c.dow===0) ? 'text-red-500' : 'text-slate-700')"
+                        x-text="c.day"></span>
+                  <span class="text-[11px] leading-none"
+                        :class="c.mark==='yes' ? 'text-green-600' : (c.mark==='no' ? 'text-red-500' : 'text-amber-500')"
+                        x-text="c.mark==='yes' ? '✔' : (c.mark==='no' ? '✖' : (c.mark==='part' ? '◐' : ''))"></span>
+                </div>
+                <span x-show="c.holiday" class="text-[9px] leading-tight text-red-500 truncate" x-text="c.holiday"></span>
+                <span x-show="c.budget>0" class="text-[10px] leading-tight text-slate-500">預 <span x-text="kfmt(c.budget)"></span></span>
+                <span x-show="c.hasActual" class="text-[10px] leading-tight font-medium"
+                      :class="c.diff>=0 ? 'text-green-600' : 'text-red-600'">實 <span x-text="kfmt(c.actual)"></span></span>
+                <template x-for="e in c.entries" :key="e.clinic_id">
+                  <span class="text-[10px] leading-tight rounded px-0.5 truncate"
+                        :class="e.off ? 'bg-slate-100 text-slate-400 line-through' : (e.missing ? 'bg-orange-100 text-orange-700' : 'bg-blue-50 text-blue-700')">
+                    <span x-text="e.code"></span><span x-text="e.log ? '✓' : (e.missing ? '!' : '')"></span>
+                  </span>
+                </template>
+              </button>
+            </template>
+          </div>
+          <div class="text-[11px] text-slate-400 mt-1">
+            預=預算 · 實=實際(綠=高過預算,紅=低過預算) · ✔有返工 ✖冇返工 ◐部分 · ✓已記錄 !未填 · 灰色為鄰月
+          </div>
+          <div class="text-[11px] text-slate-400">
+            月曆合計 <span x-text="money(calSum.proj)"></span>(有實際用實際,否則用預算)
+            <span x-show="Math.abs(calSum.proj - result.summary.total) > 1" class="text-orange-600">
+              · 同上面總額相差 <span x-text="money(Math.abs(calSum.proj - result.summary.total))"></span>
+            </span>
+          </div>
+        </div>
+
+        <!-- 選中日子 -->
+        <template x-if="selCell()">
+          <div class="card p-3 text-sm space-y-3">
+            <div class="font-bold">
+              <span x-text="dlabel(selCell().date)"></span>
+              <span x-show="selCell().holiday" class="text-red-500 font-normal text-xs ml-1" x-text="selCell().holiday"></span>
+            </div>
+
+            <template x-for="e in selCell().entries" :key="e.clinic_id">
+              <div class="border rounded-lg p-2 space-y-2" :class="e.off ? 'bg-slate-50' : ''">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <b x-text="e.name"></b>
+                    <template x-for="(s,i) in e.sessions" :key="i">
+                      <span class="ml-1 text-xs text-slate-500">
+                        <span x-text="blk(s.block)"></span>
+                        <span x-show="s.kind==='extra'" class="bg-green-100 text-green-700 rounded px-1">加節</span>
+                        <span x-show="s.kind==='special'" class="bg-purple-100 text-purple-700 rounded px-1">特更</span>
+                      </span>
+                    </template>
+                  </div>
+                  <span x-show="!e.off" class="text-xs text-slate-500"><span x-text="e.hours"></span> 小時</span>
+                </div>
+
+                <!-- 冇返工 -->
+                <template x-if="e.off">
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="text-red-600">✖ 冇返工(已由預算扣除)</span>
+                    <button @click="undoOff(e)" class="text-blue-600">復原</button>
+                  </div>
+                </template>
+
+                <template x-if="!e.off">
+                  <div class="space-y-2">
+                    <!-- 1. 預算 -->
+                    <div class="flex justify-between">
+                      <span class="text-slate-500">預算</span>
+                      <span><b x-text="money(e.budget)"></b>
+                        <span class="text-xs text-slate-400">(時薪/特更 <span x-text="money(e.base)"></span>
+                          <template x-if="e.estShare>0"><span>＋分成估算 <span x-text="money(e.estShare)"></span></span></template>)</span>
+                      </span>
+                    </div>
+
+                    <!-- 2. 實際 -->
+                    <template x-if="e.regular && recForm[e.clinic_id]">
+                      <div class="grid grid-cols-2 gap-2">
+                        <label class="text-xs">當日診金總額<input type="number" inputmode="decimal" x-model="recForm[e.clinic_id].consult" class="inp"></label>
+                        <label class="text-xs">當日小手術總額<input type="number" inputmode="decimal" x-model="recForm[e.clinic_id].proc" class="inp"></label>
+                      </div>
+                    </template>
+                    <div class="flex justify-between">
+                      <span class="text-slate-500">實際</span>
+                      <span x-show="e.actual==null" class="text-slate-400 text-xs">未填記錄</span>
+                      <span x-show="e.actual!=null">
+                        <b x-text="money(e.actual)"></b>
+                        <span class="text-xs ml-1" :class="e.diff>=0 ? 'text-green-600' : 'text-red-600'"
+                              x-text="(e.diff>=0 ? '多過預算 ' : '少過預算 ') + money(Math.abs(e.diff))"></span>
+                      </span>
+                    </div>
+                    <div x-show="e.regular && clinicOf(e.clinic_id).procedure_pct==null" class="text-xs text-orange-600">小手術 % 待定:先記低金額,設定 % 後會自動計入。</div>
+
+                    <!-- 3. 返工 -->
+                    <div class="flex flex-wrap gap-2 pt-1 border-t">
+                      <button @click="toggleWork(e)" class="px-3 py-1 rounded-lg text-xs border"
+                              :class="e.worked ? 'bg-green-600 text-white border-green-600' : 'bg-white text-green-700 border-green-600'">
+                        ✔ 有返工
+                      </button>
+                      <button x-show="e.regular" @click="markOff(e)" class="px-3 py-1 rounded-lg text-xs border bg-white text-red-600 border-red-500">
+                        ✖ 冇返工
+                      </button>
+                      <template x-for="s in e.sessions.filter(x => x.extra_id)" :key="s.extra_id">
+                        <button @click="del('extra_sessions', s.extra_id)" class="px-3 py-1 rounded-lg text-xs border bg-white text-red-600 border-red-500">刪除加節</button>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </template>
+
+            <!-- 假期 / 年假等已扣除項目 -->
+            <template x-for="(s,i) in selCell().other" :key="'o'+i">
+              <div class="flex items-center justify-between text-xs text-slate-500">
+                <span><span class="line-through" x-text="(clinicOf(s.clinic_id).name || cl(s.clinic_id)) + ' ' + blk(s.block)"></span>
+                  <span x-text="s.reason"></span></span>
+                <button x-show="s.why==='holiday'" @click="quickWork(s)" class="text-blue-600">照常上班</button>
+              </div>
+            </template>
+
+            <div x-show="!selCell().entries.length && !selCell().other.length" class="text-slate-400 text-xs">呢日冇排班</div>
+
+            <button x-show="selCell().entries.some(e => e.regular && !e.off)" @click="saveRec()" class="btn">儲存實際記錄</button>
+            <p class="text-[11px] text-slate-400">兩格都留空再儲存,會刪除該日該診所嘅記錄。只填總數,唔好填病人姓名。</p>
+          </div>
+        </template>
+
+        <!-- 各診所 -->
+        <div class="card divide-y">
           <template x-for="r in result.summary.rows" :key="r.clinic.id">
             <div class="p-3 text-sm">
               <div class="flex justify-between font-bold">
@@ -98,7 +255,8 @@
       </div>
     </template>
 
-    <details class="bg-white rounded-xl shadow p-3 text-sm" x-show="result.skipped.length">
+    <!-- 已扣除 -->
+    <details class="card p-3 text-sm" x-show="result.skipped.length">
       <summary class="cursor-pointer">已扣除 <span x-text="result.skipped.length"></span> 節(假期/年假/取消)</summary>
       <template x-for="(s,i) in result.skipped" :key="'k'+i">
         <div class="flex justify-between items-center py-1 border-b text-xs">
@@ -111,35 +269,11 @@
         </div>
       </template>
     </details>
-
-    <div class="bg-white rounded-xl shadow p-3">
-      <div class="font-bold text-sm mb-1">本月明細</div>
-      <template x-for="(s,i) in result.sessions" :key="'s'+i">
-        <div class="flex items-center justify-between py-2 border-b text-sm">
-          <div>
-            <span class="font-medium" x-text="dlabel(s.date)"></span>
-            <span class="ml-1" x-text="cl(s.clinic_id)"></span>
-            <span class="text-slate-500 ml-1" x-text="blk(s.block)"></span>
-            <span x-show="s.kind==='extra'" class="ml-1 text-xs bg-green-100 text-green-700 rounded px-1">加節</span>
-            <span x-show="s.kind==='special'" class="ml-1 text-xs bg-purple-100 text-purple-700 rounded px-1">特更</span>
-            <span x-show="s.ov_id" class="ml-1 text-xs bg-yellow-100 text-yellow-700 rounded px-1">已調整</span>
-          </div>
-          <div class="text-right whitespace-nowrap">
-            <span class="text-slate-500" x-text="s.hours + 'h'"></span>
-            <span x-text="money(s.base)"></span>
-            <button x-show="s.kind==='regular'" @click="quickCancel(s)" class="ml-2 text-red-600">取消</button>
-            <button x-show="s.ov_id" @click="restore(s.ov_id)" class="ml-2 text-blue-600">還原</button>
-            <button x-show="s.extra_id" @click="del('extra_sessions', s.extra_id)" class="ml-2 text-red-600">刪除</button>
-          </div>
-        </div>
-      </template>
-      <div x-show="!result.sessions.length" class="text-sm text-slate-400 py-2">本月冇 session</div>
-    </div>
   </section>
 
   <!-- ========== 記錄 ========== -->
   <section x-show="tab==='rec'" class="p-3 space-y-4">
-    <div class="bg-white rounded-xl shadow p-3 space-y-3 text-sm">
+    <div class="card p-3 space-y-3 text-sm">
       <div class="font-bold">📝 每日記錄(只填總數,唔好填病人姓名)</div>
       <div class="flex items-center gap-3 flex-wrap">
         <input type="date" x-model="recDate" @change="loadRec()" class="border rounded p-1">
@@ -149,18 +283,18 @@
         <div class="border rounded p-2 space-y-1">
           <div class="font-medium" x-text="c.name"></div>
           <div class="grid grid-cols-2 gap-2">
-            <label>當日診金總額<input type="number" inputmode="decimal" x-model="recForm[c.id].consult" class="w-full border rounded p-1"></label>
-            <label>當日小手術總額<input type="number" inputmode="decimal" x-model="recForm[c.id].proc" class="w-full border rounded p-1"></label>
+            <label>當日診金總額<input type="number" inputmode="decimal" x-model="recForm[c.id].consult" class="inp"></label>
+            <label>當日小手術總額<input type="number" inputmode="decimal" x-model="recForm[c.id].proc" class="inp"></label>
           </div>
           <div x-show="c.procedure_pct==null" class="text-xs text-orange-600">小手術 % 待定:先記低金額,設定 % 後會自動計入。</div>
         </div>
       </template>
       <div x-show="!recClinics().length" class="text-slate-400 text-xs">呢日冇固定更。如要補記,剔「顯示全部診所」。</div>
       <p class="text-xs text-slate-500">兩格都留空再儲存,會刪除該日該診所的記錄。</p>
-      <button @click="saveRec()" class="bg-blue-600 text-white rounded px-4 py-1">儲存</button>
+      <button @click="saveRec()" class="btn">儲存</button>
     </div>
 
-    <div x-show="(result.summary?.missing || []).length" class="bg-white rounded-xl shadow p-3 text-sm">
+    <div x-show="(result.summary?.missing || []).length" class="card p-3 text-sm">
       <div class="font-bold mb-1">⚠ 未填記錄(過去的更)</div>
       <template x-for="(s,i) in (result.summary?.missing || [])" :key="'ms'+i">
         <button @click="goRec(s.date, s.clinic_id)" class="inline-block bg-orange-50 border border-orange-300 text-orange-700 rounded px-2 py-0.5 mr-1 mb-1 text-xs">
@@ -169,7 +303,7 @@
       </template>
     </div>
 
-    <div class="bg-white rounded-xl shadow p-3 text-sm">
+    <div class="card p-3 text-sm">
       <div class="font-bold mb-1"><span x-text="y+'年'+m+'月'"></span> 已記錄</div>
       <template x-for="l in monthLogs()" :key="l.id">
         <div class="flex justify-between items-center py-1 border-b text-xs">
@@ -187,7 +321,7 @@
 
   <!-- ========== Invoice ========== -->
   <section x-show="tab==='inv'" class="p-3 space-y-4">
-    <div class="bg-white rounded-xl shadow p-3 text-sm space-y-2">
+    <div class="card p-3 text-sm space-y-2">
       <div class="font-bold">🧾 <span x-text="y+'年'+m+'月'"></span> Invoice(每間診所分開出)</div>
       <label class="block">發出日期 <input type="date" x-model="issueDate" class="border rounded p-1 ml-1"></label>
       <template x-for="x in invRows()" :key="x.r.clinic.id">
@@ -229,7 +363,7 @@
       <p class="text-xs text-slate-500">Invoice 生成後內容固定。之後補了記錄或改了設定,請「刪除重做」。</p>
     </div>
 
-    <div class="bg-white rounded-xl shadow p-3 text-sm space-y-2">
+    <div class="card p-3 text-sm space-y-2">
       <div class="flex items-center justify-between">
         <div class="font-bold">💰 未收款 Invoice</div>
         <label class="text-xs">提醒語言
@@ -264,7 +398,7 @@
       <div x-show="!openList().length" class="text-slate-400 text-xs">冇未收款 invoice</div>
     </div>
 
-    <details class="bg-white rounded-xl shadow p-3 text-sm" x-show="paidList().length">
+    <details class="card p-3 text-sm" x-show="paidList().length">
       <summary class="cursor-pointer">已收款(<span x-text="paidList().length"></span>)</summary>
       <template x-for="i in paidList()" :key="i.id">
         <div class="flex justify-between py-1 border-b text-xs">
@@ -278,63 +412,63 @@
 
   <!-- ========== 加節 / 調整 ========== -->
   <section x-show="tab==='adj'" class="p-3 space-y-4">
-    <form @submit.prevent="addExtra()" class="bg-white rounded-xl shadow p-3 space-y-2 text-sm">
+    <form @submit.prevent="addExtra()" class="card p-3 space-y-2 text-sm">
       <div class="font-bold">➕ 加節 / 代診 / 特更</div>
       <div class="grid grid-cols-2 gap-2">
         <label>診所
-          <select x-model="extraForm.clinic_id" class="w-full border rounded p-1">
+          <select x-model="extraForm.clinic_id" class="inp">
             <template x-for="c in clinics" :key="c.id"><option :value="c.id" x-text="c.name"></option></template>
           </select></label>
-        <label>日期<input type="date" x-model="extraForm.date" class="w-full border rounded p-1"></label>
-        <label>時數<input type="number" step="0.5" x-model="extraForm.hours" class="w-full border rounded p-1"></label>
-        <label>固定金額(特更才填)<input type="number" x-model="extraForm.fixed_amount" placeholder="例:14000" class="w-full border rounded p-1"></label>
+        <label>日期<input type="date" x-model="extraForm.date" class="inp"></label>
+        <label>時數<input type="number" step="0.5" x-model="extraForm.hours" class="inp"></label>
+        <label>固定金額(特更才填)<input type="number" x-model="extraForm.fixed_amount" placeholder="例:14000" class="inp"></label>
       </div>
-      <input x-model="extraForm.note" placeholder="備註(選填,唔好填病人資料)" class="w-full border rounded p-1">
+      <input x-model="extraForm.note" placeholder="備註(選填,唔好填病人資料)" class="inp">
       <p class="text-xs text-slate-500">普通加節:填時數,按時薪計。特更:填固定金額(時數只作記錄,不加分成)。</p>
-      <button class="bg-blue-600 text-white rounded px-4 py-1">新增</button>
+      <button class="btn">新增</button>
     </form>
 
-    <form @submit.prevent="addOverride()" class="bg-white rounded-xl shadow p-3 space-y-2 text-sm">
+    <form @submit.prevent="addOverride()" class="card p-3 space-y-2 text-sm">
       <div class="font-bold">🛠 單日調整</div>
       <div class="grid grid-cols-2 gap-2">
-        <label>日期<input type="date" x-model="ovForm.date" class="w-full border rounded p-1"></label>
+        <label>日期<input type="date" x-model="ovForm.date" class="inp"></label>
         <label>診所
-          <select x-model="ovForm.clinic_id" class="w-full border rounded p-1">
+          <select x-model="ovForm.clinic_id" class="inp">
             <option value="">全部診所</option>
             <template x-for="c in clinics" :key="c.id"><option :value="c.id" x-text="c.name"></option></template>
           </select></label>
         <label>時段
-          <select x-model="ovForm.block" class="w-full border rounded p-1">
+          <select x-model="ovForm.block" class="inp">
             <option value="all">全日</option><option value="am">上午</option><option value="pm">下午</option>
           </select></label>
         <label>動作
-          <select x-model="ovForm.action" class="w-full border rounded p-1">
+          <select x-model="ovForm.action" class="inp">
             <option value="work">照常上班 / 改時數</option><option value="cancel">取消</option>
           </select></label>
-        <label>改時數(選填,要揀上午或下午)<input type="number" step="0.25" x-model="ovForm.hours" class="w-full border rounded p-1"></label>
-        <label>備註<input x-model="ovForm.note" class="w-full border rounded p-1"></label>
+        <label>改時數(選填,要揀上午或下午)<input type="number" step="0.25" x-model="ovForm.hours" class="inp"></label>
+        <label>備註<input x-model="ovForm.note" class="inp"></label>
       </div>
       <p class="text-xs text-slate-500">公眾假期要上班:揀「照常上班」。病假或臨時取消:揀「取消」。</p>
-      <button class="bg-blue-600 text-white rounded px-4 py-1">新增</button>
+      <button class="btn">新增</button>
     </form>
   </section>
 
   <!-- ========== 年假 ========== -->
   <section x-show="tab==='leave'" class="p-3 space-y-4">
-    <form @submit.prevent="addLeave()" class="bg-white rounded-xl shadow p-3 space-y-2 text-sm">
+    <form @submit.prevent="addLeave()" class="card p-3 space-y-2 text-sm">
       <div class="font-bold">🌴 新增年假 / 旅行</div>
       <div class="grid grid-cols-2 gap-2">
-        <label>開始<input type="date" x-model="leaveForm.start_date" class="w-full border rounded p-1"></label>
-        <label>結束(單日可留空)<input type="date" x-model="leaveForm.end_date" class="w-full border rounded p-1"></label>
+        <label>開始<input type="date" x-model="leaveForm.start_date" class="inp"></label>
+        <label>結束(單日可留空)<input type="date" x-model="leaveForm.end_date" class="inp"></label>
         <label>時段
-          <select x-model="leaveForm.period" class="w-full border rounded p-1">
+          <select x-model="leaveForm.period" class="inp">
             <option value="full">全日</option><option value="am">只放上午</option><option value="pm">只放下午</option>
           </select></label>
-        <label>原因<input x-model="leaveForm.reason" placeholder="例:日本旅行" class="w-full border rounded p-1"></label>
+        <label>原因<input x-model="leaveForm.reason" placeholder="例:日本旅行" class="inp"></label>
       </div>
-      <button class="bg-blue-600 text-white rounded px-4 py-1">新增</button>
+      <button class="btn">新增</button>
     </form>
-    <div class="bg-white rounded-xl shadow divide-y">
+    <div class="card divide-y">
       <template x-for="l in leaves" :key="l.id">
         <div class="p-3 text-sm flex justify-between">
           <div><span x-text="l.start_date"></span> → <span x-text="l.end_date"></span>
@@ -350,26 +484,26 @@
   <!-- ========== 診所 ========== -->
   <section x-show="tab==='clinic'" class="p-3 space-y-4">
     <template x-for="c in clinics" :key="c.id">
-      <div class="bg-white rounded-xl shadow p-3 space-y-2 text-sm">
+      <div class="card p-3 space-y-2 text-sm">
         <div class="flex justify-between items-center">
           <b x-text="c.name"></b>
           <label><input type="checkbox" x-model="c.active"> 啟用</label>
         </div>
         <div class="grid grid-cols-2 gap-2">
-          <label>代號<input x-model="c.code" class="w-full border rounded p-1"></label>
-          <label>名稱<input x-model="c.name" class="w-full border rounded p-1"></label>
-          <label>時薪 HK$<input type="number" x-model.number="c.hourly_rate" class="w-full border rounded p-1"></label>
-          <label>付款期限(日)<input type="number" x-model.number="c.payment_terms_days" class="w-full border rounded p-1"></label>
-          <label>診金分成 %<input type="number" x-model.number="c.consult_pct" class="w-full border rounded p-1"></label>
-          <label>小手術分成 %(留空=待定)<input type="number" x-model.number="c.procedure_pct" class="w-full border rounded p-1"></label>
-          <label>預計每日診金總額<input type="number" x-model.number="c.est_consult_per_day" class="w-full border rounded p-1"></label>
-          <label>預計每日小手術總額<input type="number" x-model.number="c.est_procedure_per_day" class="w-full border rounded p-1"></label>
+          <label>代號<input x-model="c.code" class="inp"></label>
+          <label>名稱<input x-model="c.name" class="inp"></label>
+          <label>時薪 HK$<input type="number" x-model.number="c.hourly_rate" class="inp"></label>
+          <label>付款期限(日)<input type="number" x-model.number="c.payment_terms_days" class="inp"></label>
+          <label>診金分成 %<input type="number" x-model.number="c.consult_pct" class="inp"></label>
+          <label>小手術分成 %(留空=待定)<input type="number" x-model.number="c.procedure_pct" class="inp"></label>
+          <label>預計每日診金總額<input type="number" x-model.number="c.est_consult_per_day" class="inp"></label>
+          <label>預計每日小手術總額<input type="number" x-model.number="c.est_procedure_per_day" class="inp"></label>
           <div class="col-span-2 font-bold pt-1">Invoice 資料</div>
-          <label class="col-span-2">開單名稱 Bill to<input x-model="c.bill_name" class="w-full border rounded p-1"></label>
-          <label class="col-span-2">開單地址<textarea x-model="c.bill_address" rows="2" class="w-full border rounded p-1"></textarea></label>
-          <label>聯絡人<input x-model="c.contact_name" class="w-full border rounded p-1"></label>
-          <label>聯絡 WhatsApp<input x-model="c.contact_whatsapp" placeholder="例:91234567" class="w-full border rounded p-1"></label>
-          <label class="col-span-2">聯絡 Email<input x-model="c.contact_email" class="w-full border rounded p-1"></label>
+          <label class="col-span-2">開單名稱 Bill to<input x-model="c.bill_name" class="inp"></label>
+          <label class="col-span-2">開單地址<textarea x-model="c.bill_address" rows="2" class="inp"></textarea></label>
+          <label>聯絡人<input x-model="c.contact_name" class="inp"></label>
+          <label>聯絡 WhatsApp<input x-model="c.contact_whatsapp" placeholder="例:91234567" class="inp"></label>
+          <label class="col-span-2">聯絡 Email<input x-model="c.contact_email" class="inp"></label>
         </div>
         <div class="text-xs text-slate-600">
           固定時段:
@@ -381,61 +515,61 @@
             </span>
           </template>
         </div>
-        <button @click="saveClinic(c)" class="bg-blue-600 text-white rounded px-4 py-1">儲存</button>
+        <button @click="saveClinic(c)" class="btn">儲存</button>
       </div>
     </template>
 
-    <form @submit.prevent="addRule()" class="bg-white rounded-xl shadow p-3 space-y-2 text-sm">
+    <form @submit.prevent="addRule()" class="card p-3 space-y-2 text-sm">
       <div class="font-bold">➕ 新增固定時段</div>
       <div class="grid grid-cols-2 gap-2">
         <label>診所
-          <select x-model="ruleForm.clinic_id" class="w-full border rounded p-1">
+          <select x-model="ruleForm.clinic_id" class="inp">
             <template x-for="c in clinics" :key="c.id"><option :value="c.id" x-text="c.name"></option></template>
           </select></label>
         <label>星期
-          <select x-model.number="ruleForm.weekday" class="w-full border rounded p-1">
+          <select x-model.number="ruleForm.weekday" class="inp">
             <option value="1">一</option><option value="2">二</option><option value="3">三</option><option value="4">四</option>
             <option value="5">五</option><option value="6">六</option><option value="0">日</option>
           </select></label>
         <label>段
-          <select x-model="ruleForm.block" class="w-full border rounded p-1">
+          <select x-model="ruleForm.block" class="inp">
             <option value="am">上午</option><option value="pm">下午</option>
           </select></label>
         <div class="grid grid-cols-2 gap-1">
-          <label>開始<input type="time" x-model="ruleForm.start_time" class="w-full border rounded p-1"></label>
-          <label>結束<input type="time" x-model="ruleForm.end_time" class="w-full border rounded p-1"></label>
+          <label>開始<input type="time" x-model="ruleForm.start_time" class="inp"></label>
+          <label>結束<input type="time" x-model="ruleForm.end_time" class="inp"></label>
         </div>
       </div>
-      <button class="bg-blue-600 text-white rounded px-4 py-1">新增時段</button>
+      <button class="btn">新增時段</button>
     </form>
 
-    <form @submit.prevent="addClinic()" class="bg-white rounded-xl shadow p-3 space-y-2 text-sm">
+    <form @submit.prevent="addClinic()" class="card p-3 space-y-2 text-sm">
       <div class="font-bold">➕ 新增診所</div>
       <div class="grid grid-cols-3 gap-2">
-        <input x-model="newClinic.code" placeholder="代號" class="border rounded p-1">
-        <input x-model="newClinic.name" placeholder="名稱" class="border rounded p-1">
-        <input type="number" x-model="newClinic.hourly_rate" placeholder="時薪" class="border rounded p-1">
+        <input x-model="newClinic.code" placeholder="代號" class="inp">
+        <input x-model="newClinic.name" placeholder="名稱" class="inp">
+        <input type="number" x-model="newClinic.hourly_rate" placeholder="時薪" class="inp">
       </div>
-      <button class="bg-blue-600 text-white rounded px-4 py-1">新增診所</button>
+      <button class="btn">新增診所</button>
     </form>
   </section>
 
   <!-- ========== 設定 ========== -->
   <section x-show="tab==='set'" class="p-3 space-y-4">
-    <div class="bg-white rounded-xl shadow p-3 space-y-2 text-sm">
+    <div class="card p-3 space-y-2 text-sm">
       <div class="font-bold">👤 我的資料(Invoice 抬頭)</div>
       <p class="text-xs text-slate-500">呢啲資料只存喺 Supabase(受 RLS 保護),唔會出現喺 GitHub 的 code。</p>
       <div class="grid grid-cols-2 gap-2">
-        <label>姓名<input x-model="profile.full_name" class="w-full border rounded p-1"></label>
-        <label>註冊編號<input x-model="profile.reg_no" class="w-full border rounded p-1"></label>
-        <label class="col-span-2">地址<textarea x-model="profile.address" rows="2" class="w-full border rounded p-1"></textarea></label>
-        <label>電話<input x-model="profile.phone" class="w-full border rounded p-1"></label>
-        <label>Email<input x-model="profile.email" class="w-full border rounded p-1"></label>
-        <label>銀行<input x-model="profile.bank_name" class="w-full border rounded p-1"></label>
-        <label>戶口名稱<input x-model="profile.account_name" class="w-full border rounded p-1"></label>
-        <label>戶口號碼<input x-model="profile.account_no" class="w-full border rounded p-1"></label>
-        <label>轉數快 FPS(選填)<input x-model="profile.fps_id" class="w-full border rounded p-1"></label>
-        <label class="col-span-2">Invoice 底部備註(選填)<textarea x-model="profile.footer_note" rows="2" class="w-full border rounded p-1"></textarea></label>
+        <label>姓名<input x-model="profile.full_name" class="inp"></label>
+        <label>註冊編號<input x-model="profile.reg_no" class="inp"></label>
+        <label class="col-span-2">地址<textarea x-model="profile.address" rows="2" class="inp"></textarea></label>
+        <label>電話<input x-model="profile.phone" class="inp"></label>
+        <label>Email<input x-model="profile.email" class="inp"></label>
+        <label>銀行<input x-model="profile.bank_name" class="inp"></label>
+        <label>戶口名稱<input x-model="profile.account_name" class="inp"></label>
+        <label>戶口號碼<input x-model="profile.account_no" class="inp"></label>
+        <label>轉數快 FPS(選填)<input x-model="profile.fps_id" class="inp"></label>
+        <label class="col-span-2">Invoice 底部備註(選填)<textarea x-model="profile.footer_note" rows="2" class="inp"></textarea></label>
       </div>
       <div>
         <div class="mb-1">簽名圖片(白底相或透明 PNG,會自動縮細)</div>
@@ -448,7 +582,7 @@
         </template>
         <p class="text-xs text-slate-500 mt-1">揀完圖片後,要按下面「儲存」先會保存。</p>
       </div>
-      <button @click="saveProfile()" class="bg-blue-600 text-white rounded px-4 py-1">儲存</button>
+      <button @click="saveProfile()" class="btn">儲存</button>
     </div>
   </section>
 </div>
