@@ -489,3 +489,95 @@
     }
   }
 }
+
+
+/* 每日時間欄：維持原有 1 分鐘 = 2px 的尺寸。 */
+.aw-work-column {
+  position: relative;
+  isolation: isolate;
+}
+
+/* 空白時間格 < 返工底色 < 病人預約卡 */
+.aw-work-column .aw-grid-slot {
+  position: relative;
+  z-index: 0;
+}
+
+.aw-work-column .aw-work-band {
+  position: absolute;
+  z-index: 1;
+  box-sizing: border-box;
+  display: block;
+  margin: 0;
+  padding: 3px 4px;
+  overflow: hidden;
+
+  border: 0;
+  border-left: 3px solid var(--work-line);
+  border-radius: 0;
+
+  background: var(--work-bg);
+  color: var(--work-ink);
+
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.aw-work-column .aw-work-band:hover {
+  filter: brightness(0.97);
+}
+
+.aw-work-column .aw-work-band:focus-visible {
+  outline: 2px solid var(--work-ink);
+  outline-offset: -2px;
+}
+
+.aw-work-column .aw-work-band:disabled {
+  cursor: default;
+}
+
+.aw-work-band__label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* 保留現有預約卡定位，只提高圖層。 */
+.aw-work-column .aw-booking-card {
+  z-index: 3;
+}
+
+.aw-work-notes {
+  display: grid;
+  gap: 3px;
+  margin-top: 4px;
+  text-align: left;
+}
+
+.aw-work-note {
+  padding: 3px 5px;
+  border-radius: 4px;
+  background: #fff4dd;
+  color: #785000;
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.aw-work-status {
+  margin: 6px 0;
+  font-size: 12px;
+  color: #596579;
+}
+
+.aw-work-status--error {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #fff1f0;
+  color: #a12622;
+}
