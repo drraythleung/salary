@@ -68,6 +68,25 @@ details>summary{cursor:pointer;font-weight:650}
 .day{min-height:78px;font-size:11px}
 .day .value{font-size:9px}
 }
+/* 星期日標題、星期日／公眾假期日期、假期名稱 */
+.week.sunday,
+.day.red-day .date-number,
+.day .holiday-name {
+  color: #c62828;
+}
+
+.day.red-day .date-number {
+  font-weight: 700;
+}
+
+/* 月曆上的休假標示 */
+.day .leave-name {
+  color: #7c3aed;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 3px;
+  white-space: normal;
+}
 </style>
 </head>
 <body>
@@ -161,29 +180,60 @@ details>summary{cursor:pointer;font-weight:650}
           <div class="panel">
             <h2>本月更表</h2>
             <div class="calendar">
-              <template x-for="w in ['日','一','二','三','四','五','六']">
-                <div class="week" x-text="w"></div>
-              </template>
-              <template x-for="cell in cells" :key="cell.date">
-                <button class="day"
-                  :class="{
-                    selected:calSel===cell.date,
-                    outside:!cell.inMonth,
-                    done:cell.mark==='yes',
-                    pending:cell.entries.some(e=>confirmed(e)&&needsLog(e))
-                  }"
-                  :aria-label="cell.date"
-                  @click="run(()=>selectDay(cell.date))">
-                  <span x-text="cell.day+(cell.isToday?' · 今日':'')"></span>
-                  <span x-text="cell.entries.map(e=>e.code).join(' / ')"></span>
-                  <span x-text="cell.holiday"></span>
-                  <span class="value"
-                    x-text="cell.entries.some(e=>confirmed(e))
-                      ? money(cell.entries.reduce((n,e)=>n+entryEarned(e),0))
-                      : cell.entries.length ? '預 '+money(cell.budget) : ''"></span>
-                </button>
-              </template>
-            </div>
+  <template x-for="w in ['日','一','二','三','四','五','六']">
+    <div
+      class="week"
+      :class="{ sunday: w === '日' }"
+      x-text="w">
+    </div>
+  </template>
+
+  <template x-for="cell in cells" :key="cell.date">
+    <button
+      class="day"
+      :class="{
+        selected: calSel === cell.date,
+        outside: !cell.inMonth,
+        done: cell.mark === 'yes',
+        pending: cell.entries.some(e => confirmed(e) && needsLog(e)),
+        'red-day': !!cell.holiday ||
+          new Date(cell.date + 'T12:00:00').getDay() === 0
+      }"
+      :aria-label="cell.date"
+      @click="run(() => selectDay(cell.date))">
+
+      <span
+        class="date-number"
+        x-text="cell.day + (cell.isToday ? ' · 今日' : '')">
+      </span>
+
+      <span
+        x-text="cell.entries.map(e => e.code).join(' / ')">
+      </span>
+
+   <!-- 公眾假期名稱 -->
+<span
+  class="holiday-name"
+  x-text="cell.holiday">
+</span>
+
+<!-- 自己落的休假 -->
+<span
+  class="leave-name"
+  x-show="leaveLabel(cell.date)"
+  x-text="leaveLabel(cell.date)">
+</span>
+
+<!-- 收入金額：保留原有邏輯 -->
+<span
+  class="value"
+  x-text="cell.entries.some(e => confirmed(e))
+    ? money(cell.entries.reduce((n,e) => n + entryEarned(e), 0))
+    : cell.entries.length ? '預 ' + money(cell.budget) : ''">
+</span>
+              </button>
+            </template>
+          </div>
           </div>
 
           <div class="panel">
@@ -560,6 +610,25 @@ function incomeApp(){
     },
 
     todayDate(){return Calc2.today()},
+    leaveLabel(date){
+  return (this.leaves || [])
+    .filter(l =>
+      l.start_date &&
+      date >= l.start_date &&
+      date <= (l.end_date || l.start_date)
+    )
+    .map(l => {
+      const period =
+        l.period === 'am' ? '上午休假' :
+        l.period === 'pm' ? '下午休假' :
+        '全日休假';
+
+      const reason = (l.reason || '').trim();
+
+      return reason ? `${period} · ${reason}` : period;
+    })
+    .join(' / ');
+},
     monthPrefix(){return `${this.y}-${String(this.m).padStart(2,'0')}-`},
     monthEntries(){
       return this.cells.filter(c=>c.inMonth).flatMap(c=>c.entries);
