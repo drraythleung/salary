@@ -6,67 +6,351 @@
 <meta name="theme-color" content="#173e37">
 <title>診金預算及 Invoice 管理</title>
 <style>
-:root{--bg:#f4f7fa;--ink:#172b3a;--muted:#687e8b;--line:#e1e9ee;--green:#197563;--dark:#173e37}
-*{box-sizing:border-box}
-[x-cloak]{display:none!important}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 system-ui,-apple-system,"Noto Sans TC",sans-serif}
-header{background:white;border-bottom:1px solid var(--line)}
-.wrap{max-width:1180px;margin:auto;padding:18px}
-header .wrap,.bar,.actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-header .wrap,.bar{justify-content:space-between}
-h1{font-size:25px;margin:0}h2{font-size:19px;margin:0 0 14px}h3{font-size:16px}
-p{margin:8px 0}
-small,.muted{color:var(--muted)}
-button,input,select,textarea{font:inherit}
-button{cursor:pointer;background:white;border:1px solid #cbd9df;border-radius:9px;padding:9px 13px;color:var(--ink)}
-button:hover{border-color:var(--green)}
-button:disabled{opacity:.5;cursor:not-allowed}
-button.primary,.tabs button.active{background:var(--green);border-color:var(--green);color:white}
-button.danger{color:#a52d37}
-button:focus-visible,a:focus-visible{outline:3px solid #88bdf0;outline-offset:2px}
-input,select,textarea{width:100%;padding:10px;border:1px solid #cad8df;border-radius:8px;background:white;color:var(--ink)}
-input[type=checkbox]{width:auto}
-label{display:block;font-size:13px}
-label input,label select,label textarea{margin-top:5px}
-fieldset{border:0;padding:0;margin:0;min-width:0}
-.panel{background:white;border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:16px}
-.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-.formgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
-.card{padding:24px;border-radius:17px;background:#eaf2fc}
-.card.dark{background:var(--dark);color:white}
-.card.dark small{color:#c4ddd4}
-.amount{font-size:35px;font-weight:750;letter-spacing:-1px;margin:10px 0}
-.notice{padding:12px 16px;margin:12px 0;border-radius:10px;background:#fff3d9;color:#79571c;white-space:pre-wrap}
-.error{background:#ffe9eb;color:#942d39}
-.success{background:#e5f5eb;color:#256c45}
-.tabs{display:flex;gap:7px;overflow:auto;padding:16px 0}
-.tabs button{white-space:nowrap}
-.scroll{overflow:auto}
-table{width:100%;border-collapse:collapse;text-align:left;white-space:nowrap}
-td,th{padding:11px;border-bottom:1px solid var(--line)}
-th{font-size:12px;color:var(--muted)}
-.calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
-.week{text-align:center;color:var(--muted);font-size:12px}
-.day{min-height:92px;padding:8px 5px;text-align:left;font-size:12px;background:#f4f7fa}
-.day span{display:block;overflow:hidden;text-overflow:ellipsis}
-.day.selected{outline:2px solid var(--green)}
-.day.outside{opacity:.4}
-.day.done{background:#e7f5ed}
-.day.pending{background:#fff2d7}
-.day .value{font-size:11px;margin-top:7px;font-weight:bold}
-.login{max-width:420px;margin:35px auto}
-.badge{display:inline-block;padding:3px 8px;border-radius:6px;background:#edf3f5;font-size:12px}
-.stack>*+*{margin-top:12px}
-a{color:var(--green)}
-details>summary{cursor:pointer;font-weight:650}
-.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--dark);color:white;padding:12px 22px;border-radius:10px;z-index:50;max-width:90%}
-@media(max-width:650px){
-.grid{grid-template-columns:1fr}
-.wrap{padding:12px}
-.panel{padding:14px}
-.amount{font-size:30px}
-.day{min-height:78px;font-size:11px}
-.day .value{font-size:9px}
+/* 純 UI 微調：不改動資料及功能 */
+:root {
+  --bg: #f5f7f9;
+  --ink: #21332f;
+  --muted: #73817d;
+  --line: #e5ebe8;
+  --green: #237563;
+  --dark: #183f36;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+header {
+  background: #fff;
+  border-bottom-color: var(--line);
+}
+
+header strong {
+  font-size: 16px;
+  letter-spacing: .3px;
+}
+
+.wrap {
+  max-width: 1180px;
+  padding: 22px;
+}
+
+main.wrap {
+  padding-top: 28px;
+  padding-bottom: 64px;
+}
+
+h1 {
+  font-size: 28px;
+  letter-spacing: -.7px;
+}
+
+h2 {
+  letter-spacing: -.3px;
+}
+
+button {
+  min-height: 42px;
+  border-color: #dce5e0;
+  border-radius: 10px;
+  font-weight: 550;
+  transition: background .15s, border-color .15s, box-shadow .15s;
+}
+
+button:hover:not(:disabled) {
+  background: #f0f6f3;
+  border-color: #a8c5b9;
+}
+
+button.primary {
+  box-shadow: 0 3px 8px rgb(35 117 99 / 12%);
+}
+
+button.primary:hover:not(:disabled) {
+  background: #1b6252;
+  border-color: #1b6252;
+}
+
+button.danger:hover:not(:disabled) {
+  background: #fff0f1;
+  border-color: #e7bdc1;
+}
+
+.tabs {
+  gap: 8px;
+  padding: 22px 0;
+}
+
+.tabs button {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  background: transparent;
+  border-color: transparent;
+  color: #61736c;
+}
+
+.tabs button.active,
+.tabs button.active:hover {
+  background: var(--green);
+  border-color: var(--green);
+  color: white;
+  box-shadow: 0 4px 10px rgb(35 117 99 / 14%);
+}
+
+.grid {
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.card {
+  padding: 26px;
+  border: 1px solid #dce7ef;
+  border-radius: 20px;
+  background: #edf3f8;
+}
+
+.card > strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 12px;
+  letter-spacing: .7px;
+}
+
+.card > div:not(.amount) {
+  font-weight: 600;
+}
+
+.card.dark {
+  background: var(--dark);
+  border-color: var(--dark);
+  box-shadow: 0 8px 20px rgb(24 63 54 / 12%);
+}
+
+.amount {
+  margin: 14px 0;
+  font-size: clamp(28px, 3.5vw, 40px);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.panel {
+  padding: 24px;
+  border-radius: 18px;
+  box-shadow: 0 3px 14px rgb(29 53 43 / 3%);
+}
+
+.panel .panel {
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.panel .panel:last-child {
+  margin-bottom: 0;
+}
+
+.notice {
+  margin: 16px 0;
+  padding: 14px 17px;
+  border: 1px solid #f0e2bf;
+  border-radius: 12px;
+  background: #fff8e9;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.notice.error {
+  background: #fff0f1;
+  border-color: #f0d1d5;
+  color: #942d39;
+}
+
+label {
+  color: #53675e;
+  font-weight: 550;
+}
+
+input,
+select,
+textarea {
+  min-height: 44px;
+  border-color: #dbe4df;
+  border-radius: 10px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid #a3c9bb;
+  outline-offset: 2px;
+  border-color: var(--green);
+}
+
+input[type="checkbox"] {
+  min-height: auto;
+  accent-color: var(--green);
+}
+
+textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.calendar {
+  gap: 7px;
+}
+
+.week {
+  padding: 5px 0 10px;
+  font-weight: 600;
+}
+
+.day {
+  min-height: 102px;
+  padding: 10px 8px;
+  border: 1px solid #e9eeeb;
+  border-radius: 12px;
+  background: #f7f9f8;
+}
+
+.day > span:first-child {
+  font-weight: 650;
+}
+
+.day.done,
+.day.done:hover:not(:disabled) {
+  background: #eaf5ee;
+  border-color: #d5e8dc;
+}
+
+.day.pending,
+.day.pending:hover:not(:disabled) {
+  background: #fff4df;
+  border-color: #efdfba;
+}
+
+.day.selected {
+  outline: 2px solid var(--green);
+  outline-offset: 1px;
+}
+
+.day .value {
+  margin-top: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+th {
+  background: #f7f9f8;
+  font-weight: 600;
+}
+
+td,
+th {
+  padding: 13px 12px;
+}
+
+tbody tr:hover {
+  background: #fafcfb;
+}
+
+.badge {
+  padding: 4px 9px;
+  border-radius: 7px;
+  background: #eef4f0;
+  color: #496859;
+}
+
+.toast {
+  bottom: 24px;
+  box-shadow: 0 8px 28px rgb(24 63 54 / 20%);
+}
+
+@media (max-width: 650px) {
+  .wrap {
+    padding: 14px;
+  }
+
+  main.wrap {
+    padding-top: 20px;
+    padding-bottom: 40px;
+  }
+
+  header .wrap {
+    gap: 4px;
+  }
+
+  header strong {
+    font-size: 14px;
+  }
+
+  h1 {
+    font-size: 25px;
+  }
+
+  .bar {
+    gap: 12px;
+  }
+
+  .actions {
+    gap: 7px;
+  }
+
+  .actions button {
+    padding: 9px 11px;
+    font-size: 13px;
+  }
+
+  .tabs {
+    padding: 16px 0;
+  }
+
+  .tabs button {
+    padding: 9px 13px;
+    font-size: 13px;
+  }
+
+  .grid {
+    gap: 12px;
+  }
+
+  .card {
+    padding: 22px;
+    border-radius: 16px;
+  }
+
+  .panel {
+    padding: 16px;
+    border-radius: 15px;
+  }
+
+  .calendar {
+    gap: 4px;
+  }
+
+  .day {
+    min-height: 86px;
+    padding: 8px 4px;
+    border-radius: 8px;
+    font-size: 11px;
+  }
+
+  .day .value {
+    font-size: 9px;
+    letter-spacing: -.3px;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button {
+    transition: none;
+  }
 }
 </style>
 </head>
