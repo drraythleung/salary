@@ -1,4 +1,5 @@
-/* appointments.js
+/**
+ * appointments.js
  * 單醫生、單操作帳戶；全部預約時間以香港時間顯示。
  * 不使用 localStorage 儲存病人資料。
  */
