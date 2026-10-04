@@ -1055,7 +1055,34 @@ details>summary{cursor:pointer;font-weight:650}
       </label>
 
     </div>
+<div
+  role="status"
+  aria-live="polite"
+  style="margin:12px 0;padding:12px;border:1px solid #cbd5e1;border-radius:8px"
+>
+  <strong x-text="
+    apSchedule.level === 'ok' ? '✅ 符合返工安排' :
+    apSchedule.level === 'warn' ? '⚠️ 需要另外確認' :
+    apSchedule.level === 'block' ? '⛔ 不能儲存' :
+    apSchedule.level === 'unknown' ? '⚠️ 無法核對' :
+    apSchedule.level === 'loading' ? '正在核對…' :
+    apSchedule.level === 'skip' ? '取消預約' :
+    '返工安排核對'
+  "></strong>
 
+  <template x-for="(message, index) in apSchedule.messages" :key="index">
+    <div style="margin-top:6px" x-text="message"></div>
+  </template>
+
+  <button
+    type="button"
+    style="margin-top:8px"
+    @click="apQueueSchedule()"
+    :disabled="apBusy"
+  >
+    重新核對更表
+  </button>
+</div>
     <p class="muted">
       更改類型或開始時間會重新帶入預設結束時間；
       之後仍可自行修改。此處不記錄診斷、身份證號碼或病歷內容。
@@ -1288,6 +1315,7 @@ window.addEventListener('error', function(event){
 <script src="./invoice.js"></script>
 <script src="./app.js"></script>
 <script src="./dashboard.js"></script>
+<script src="./appointment-schedule.js"></script>
 <script src="./appointments.js"></script>
 
 <!-- 最後啟動 Alpine -->
