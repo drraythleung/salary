@@ -213,8 +213,8 @@ details>summary{cursor:pointer;font-weight:650}
 
 <main
   class="wrap"
-  x-data="incomeAppointments(incomeDashboard(incomeApp()))"
-  x-init="apInit()"
+  x-data="incomeAppointmentWeek(incomeAppointments(incomeDashboard(incomeApp())))"
+  x-init="awInit()"
   x-cloak>
   <div x-show="loading" class="panel">正在讀取資料……</div>
   <div x-show="err" class="notice error" role="alert">
@@ -843,58 +843,106 @@ details>summary{cursor:pointer;font-weight:650}
             </template>
           </div>
         </section>
-<!-- 病人預約 -->
-<section x-show="tab==='appt'">
 
-  <div class="panel">
-    <div class="bar">
-      <div>
-        <h2 style="margin-bottom:4px">病人預約</h2>
-        <small>
-          內部預約簿 · 單醫生 · 全部時間為香港時間
-        </small>
+        <!-- 病人預約：週／日時間表 -->
+<section
+  class="aw"
+  x-show="tab==='appt'"
+  :style="{'--aw-count': awDays().length}">
+
+  <!-- 面板外訊息：包括儲存成功後的結果 -->
+  <div
+    class="notice error"
+    role="alert"
+    x-show="apError"
+    x-text="apError">
+  </div>
+
+  <div
+    class="notice success"
+    role="status"
+    x-show="apNotice"
+    x-text="apNotice">
+  </div>
+
+  <div class="aw-shell">
+
+    <!-- 標題 -->
+    <div class="aw-toolbar">
+      <div class="aw-heading">
+        <span class="aw-icon" aria-hidden="true">▦</span>
+
+        <div>
+          <h2>病人預約</h2>
+          <small>內部預約簿 · 香港時間</small>
+        </div>
       </div>
 
       <div class="actions">
-        <button type="button" @click="apRefresh()">
-          重新讀取預約
+        <button
+          type="button"
+          @click="apRefresh()">
+          重新讀取
         </button>
 
-        <button type="button" class="primary" @click="apNew()">
-          新增預約／清空表單
+        <button
+          type="button"
+          class="primary"
+          @click="awCreate()">
+          ＋ 新增預約
         </button>
       </div>
     </div>
 
-    <div class="notice">
-  儲存前會嘗試重新核對更表，請留意下方核對結果。
-  如資料不足或需要另外確認，請先核實實際返工時段、
-  診所及休假安排；無法核對時暫停儲存。
-  修改更表不會自動更改病人預約；
-  完成預約亦不會自動加入診金收入。
+    <!-- 日期導航 -->
+    <div class="aw-toolbar" style="padding-top:0">
+      <div class="aw-navigation">
+        <button type="button" @click="awToday()">
+          今日
+        </button>
+
+        <button
+          type="button"
+          class="aw-arrow"
+          :aria-label="awView==='week' ? '上一週' : '上一日'"
+          @click="awMove(-1)">
+          ‹
+        </button>
+
+        <button
+          type="button"
+          class="aw-arrow"
+          :aria-label="awView==='week' ? '下一週' : '下一日'"
+          @click="awMove(1)">
+          ›
+        </button>
+
+        <strong class="aw-range" x-text="awTitle()"></strong>
+      </div>
+
+      <div class="aw-view" aria-label="日曆顯示方式">
+        <button
+          type="button"
+          :class="{active:awView==='day'}"
+          :aria-pressed="awView==='day'"
+          @click="awSetView('day')">
+          日
+        </button>
+
+        <button
+          type="button"
+          :class="{active:awView==='week'}"
+          :aria-pressed="awView==='week'"
+          @click="awSetView('week')">
+          週
+        </button>
+      </div>
     </div>
 
-    <div
-      class="notice error"
-      role="alert"
-      x-show="apError"
-      x-text="apError">
-    </div>
-
-    <div
-      class="notice success"
-      role="status"
-      x-show="apNotice"
-      x-text="apNotice">
-    </div>
-
-    <p x-show="apBusy" role="status">
-      正在處理預約資料……
-    </p>
-
-    <div class="formgrid">
+    <!-- 篩選 -->
+    <div class="aw-filters">
       <label>
-        查看日期
+        跳至日期
         <input
           type="date"
           x-model="apDate"
@@ -902,384 +950,549 @@ details>summary{cursor:pointer;font-weight:650}
       </label>
 
       <label>
-        篩選診所
+        診所
         <select x-model="apClinic">
           <option value="">全部診所</option>
 
           <template x-for="c in clinics" :key="c.id">
-            <option :value="String(c.id)" x-text="c.name"></option>
+            <option
+              :value="String(c.id)"
+              x-text="c.name">
+            </option>
           </template>
         </select>
       </label>
 
       <label>
-        搜尋當日預約
+        搜尋
         <input
           type="search"
-          x-model="apSearch"
+          x-model.debounce.200ms="apSearch"
           placeholder="姓名／病歷編號／電話"
           autocomplete="off">
       </label>
     </div>
 
-    <div class="actions" style="margin-top:12px">
-      <button type="button" @click="apMoveDay(-1)">
-        ‹ 前一日
-      </button>
-
-      <button
-        type="button"
-        @click="apDate=apToday(); apRefresh()">
-        今日
-      </button>
-
-      <button type="button" @click="apMoveDay(1)">
-        後一日 ›
-      </button>
-    </div>
-  </div>
-
-  <!-- 新增／修改 -->
-  <form
-    class="panel stack"
-    x-ref="apEditor"
-    autocomplete="off"
-    @submit.prevent="apSave()">
-
-    <div class="bar">
-      <h2
-        style="margin:0"
-        x-text="apForm.version>0 ? '修改／改期／更改狀態' : '新增預約'">
-      </h2>
+    <div class="aw-options">
+      <label class="aw-check">
+        <input
+          type="checkbox"
+          x-model="awShowInactive">
+        顯示已取消／失約
+      </label>
 
       <span
-        class="badge"
-        x-show="apForm.version>0"
-        x-text="'記錄版本 '+apForm.version">
+        role="status"
+        x-text="apBusy
+          ? '正在處理預約資料……'
+          : apReady
+            ? '目前顯示 '+awRows().length+' 筆預約'
+            : '預約資料尚未載入完成'">
       </span>
     </div>
 
-    <div class="formgrid">
+    <!-- 診所顏色 -->
+    <div class="aw-legend" x-show="awLegend().length">
+      <template x-for="item in awLegend()" :key="item.id">
+        <span>
+          <i
+            class="aw-dot"
+            :style="{background:item.colour}"
+            aria-hidden="true">
+          </i>
 
-      <label>
-        病人姓名或病歷編號 *
-        <input
-          x-model="apForm.patient_label"
-          maxlength="100"
-          placeholder="只填識別預約所需資料"
-          required>
-      </label>
-
-      <label>
-        聯絡電話（可留空）
-        <input
-          type="tel"
-          x-model="apForm.phone"
-          maxlength="32"
-          autocomplete="off">
-      </label>
-
-      <label>
-        診所 *
-        <select
-          x-model="apForm.clinic_id"
-          @change="apForm.schedule_checked=false"
-          required>
-
-          <option value="">請選擇</option>
-
-          <template
-            x-if="apForm.version>0 &&
-              !clinics.some(c =>
-                String(c.id)===String(apForm.clinic_id)
-              )">
-            <option
-              :value="apForm.clinic_id"
-              x-text="apForm.clinic_name+'（原有診所）'">
-            </option>
-          </template>
-
-          <template x-for="c in clinics" :key="c.id">
-            <option :value="String(c.id)" x-text="c.name"></option>
-          </template>
-        </select>
-      </label>
-
-      <label>
-        日期 *
-        <input
-          type="date"
-          x-model="apForm.date"
-          @change="apForm.schedule_checked=false"
-          required>
-      </label>
-
-      <label>
-        預約類型 *
-        <select
-          x-model="apForm.kind"
-          @change="apSetEnd()">
-
-          <template x-for="k in apKinds" :key="k[0]">
-            <option
-              :value="k[0]"
-              x-text="k[1]+'（預設 '+k[2]+' 分鐘）'">
-            </option>
-          </template>
-        </select>
-      </label>
-
-      <label>
-        開始時間 *
-        <input
-          type="time"
-          step="60"
-          x-model="apForm.start"
-          @change="apSetEnd()"
-          required>
-      </label>
-
-      <label>
-        結束時間 *
-        <input
-          type="time"
-          step="60"
-          x-model="apForm.end"
-          @change="apForm.schedule_checked=false"
-          required>
-      </label>
-
-      <label>
-        預約狀態
-        <select x-model="apForm.status">
-          <template x-for="s in apStatuses" :key="s[0]">
-            <option :value="s[0]" x-text="s[1]"></option>
-          </template>
-        </select>
-      </label>
-
-    </div>
-<div
-  role="status"
-  aria-live="polite"
-  style="margin:12px 0;padding:12px;border:1px solid #cbd5e1;border-radius:8px"
->
-  <strong x-text="
-    apSchedule.level === 'ok' ? '✅ 符合返工安排' :
-    apSchedule.level === 'warn' ? '⚠️ 需要另外確認' :
-    apSchedule.level === 'block' ? '⛔ 不能儲存' :
-    apSchedule.level === 'unknown' ? '⚠️ 無法核對' :
-    apSchedule.level === 'loading' ? '正在核對…' :
-    apSchedule.level === 'skip' ? '取消預約' :
-    '返工安排核對'
-  "></strong>
-
-  <template x-for="(message, index) in apSchedule.messages" :key="index">
-    <div style="margin-top:6px" x-text="message"></div>
-  </template>
-
-  <button
-    type="button"
-    style="margin-top:8px"
-    @click="apQueueSchedule()"
-    :disabled="apBusy"
-  >
-    重新核對更表
-  </button>
-</div>
-    <p class="muted">
-      更改類型或開始時間會重新帶入預設結束時間；
-      之後仍可自行修改。此處不記錄診斷、身份證號碼或病歷內容。
-    </p>
-
-<label x-show="apForm.status !== 'cancelled'">
-  <input
-    type="checkbox"
-    x-model="apForm.schedule_checked"
-    :required="apForm.status !== 'cancelled'"
-    :disabled="apForm.status === 'cancelled'">
-  我已核對當日實際返工時間、休假及診所安排。
-</label>
-
-<p
-  class="muted"
-  x-show="apForm.status === 'cancelled'">
-  取消預約毋須勾選返工安排確認；儲存後保留預約記錄。
-</p>
-
-    <div class="actions">
-      <button type="submit" class="primary">
-        儲存預約
-      </button>
-
-      <button type="button" @click="apNew()">
-        放棄編輯／清空
-      </button>
-    </div>
-  </form>
-
-  <!-- 當日列表 -->
-  <div class="panel scroll">
-    <div class="bar">
-      <h2 x-text="apDate+' · 預約列表'"></h2>
-
-      <small
-        x-show="apReady"
-        x-text="'符合篩選 '+apFiltered().length+' 筆；當日共 '+apRows.length+' 筆'">
-      </small>
+          <span x-text="item.name"></span>
+        </span>
+      </template>
     </div>
 
-    <p class="muted">
-      搜尋只涵蓋所選日期。
-      已取消及失約仍保留在列表，但不佔用時段。
-    </p>
+    <!-- 時間表 -->
+    <div
+      class="aw-scroll"
+      x-ref="awScroll"
+      :aria-busy="apBusy"
+      aria-label="預約時間表">
 
-    <p
-      class="muted"
-      x-show="apReady && !apFiltered().length">
-      所選日期及篩選條件下沒有預約。
-    </p>
+      <div class="aw-board">
 
-    <table x-show="apFiltered().length">
-      <thead>
-        <tr>
-          <th>時間</th>
-          <th>病人／病歷編號</th>
-          <th>電話</th>
-          <th>診所</th>
-          <th>類型</th>
-          <th>狀態</th>
-          <th>操作</th>
-        </tr>
-      </thead>
+        <!-- 星期標題 -->
+        <div class="aw-columns aw-days">
+          <div class="aw-zone">
+            香港<br>GMT+8
+          </div>
 
-      <tbody>
-        <template x-for="a in apFiltered()" :key="a.id">
-          <tr
-            :style="{
-              opacity:
-                ['cancelled','no_show'].includes(a.status)
-                ? '.6' : '1'
-            }">
+          <template x-for="day in awDays()" :key="day.date">
+            <div
+              class="aw-dayhead"
+              :class="{
+                'is-today':day.today,
+                'is-sunday':day.sunday
+              }">
 
-            <td
-              x-text="apTime(a.starts_at)+'–'+apTime(a.ends_at)">
-            </td>
+              <span x-text="'星期'+day.weekday"></span>
 
-            <td x-text="a.patient_label"></td>
-            <td x-text="a.phone || '—'"></td>
-            <td x-text="a.clinic_name"></td>
-            <td x-text="apKindLabel(a.kind)"></td>
+              <strong
+                :title="day.date"
+                x-text="day.number">
+              </strong>
+            </div>
+          </template>
+        </div>
 
-            <td>
+        <!-- 24 小時格線 -->
+        <div class="aw-columns aw-body">
+
+          <div class="aw-hours" aria-hidden="true">
+            <template x-for="hour in awHours" :key="hour">
               <span
-                class="badge"
-                x-text="apStatusLabel(a.status)">
+                class="aw-hour"
+                :style="{top:(hour*120+3)+'px'}"
+                x-text="awHM(hour*60)">
               </span>
-            </td>
+            </template>
+          </div>
 
-            <td>
-              <div class="actions">
-                <button type="button" @click="apEdit(a)">
-                  修改／改期／狀態
-                </button>
+          <template x-for="day in awDays()" :key="day.date">
+            <div
+              class="aw-daycol"
+              :class="{'is-today':day.today}">
 
-                <button type="button" @click="apHistory(a)">
-                  紀錄
-                </button>
-
+              <!--
+                滑鼠／觸控快捷新增。
+                鍵盤使用者可由上方「新增預約」輸入日期時間，
+                避免 Tab 要穿過整週 672 個空格。
+              -->
+              <template x-for="minute in awSlots" :key="minute">
                 <button
                   type="button"
-                  x-show="!['cancelled','no_show','completed'].includes(a.status)"
-                  @click="apCopyReminder(a)">
-                  複製提醒
+                  tabindex="-1"
+                  class="aw-slot"
+                  :class="{'aw-hourline':minute%60===0}"
+                  :disabled="!apReady || apBusy"
+                  :aria-label="day.date+' '+awHM(minute)+' 新增預約'"
+                  :title="day.date+' '+awHM(minute)+' · 新增預約'"
+                  @click="awCreate(day.date, awHM(minute))">
                 </button>
+              </template>
 
+              <!-- 預約卡 -->
+              <template x-for="event in awEvents(day.date)" :key="event.row.id">
                 <button
                   type="button"
-                  class="danger"
-                  x-show="!['cancelled','no_show','completed'].includes(a.status)"
-                  @click="apCancel(a)">
-                  取消
-                </button>
-              </div>
-            </td>
+                  class="aw-event"
+                  :class="{
+                    'is-compact':event.compact,
+                    'is-inactive':awInactive(event.row)
+                  }"
+                  :style="event.style"
+                  :title="awDescription(event.row)"
+                  :aria-label="awDescription(event.row)+'；開啟修改'"
+                  @click.stop="apEdit(event.row)">
 
-          </tr>
-        </template>
-      </tbody>
-    </table>
+                  <strong
+                    x-text="event.compact
+                      ? apTime(event.row.starts_at)+' '+event.row.patient_label
+                      : event.row.patient_label">
+                  </strong>
+
+                  <small
+                    x-show="!event.compact"
+                    x-text="apTime(event.row.starts_at)+'–'+apTime(event.row.ends_at)">
+                  </small>
+
+                  <small
+                    x-show="event.end-event.start>=45"
+                    x-text="event.row.clinic_name+' · '+apStatusLabel(event.row.status)">
+                  </small>
+                </button>
+              </template>
+
+            </div>
+          </template>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="aw-footer">
+      點空白時段新增；點預約卡修改。
+      搜尋涵蓋目前日／週視圖。卡片顏色代表診所。
+      <span x-show="apReady && !awRows().length">
+        目前篩選條件下沒有預約。
+      </span>
+    </div>
   </div>
 
-  <!-- 手動提醒 -->
-  <div class="panel stack" x-show="apReminder">
-    <h2>預約提醒文字</h2>
+  <details class="aw-help">
+    <summary>使用說明及注意事項</summary>
 
-    <p class="muted">
-      不會自動發送。
-      請先核對收件人、日期、時間及診所，避免發錯病人。
+    <p>
+      儲存前會沿用現有更表核對，亦需要核對實際診所及返工安排。
+      修改更表不會自動移動病人預約；
+      完成預約亦不會自動加入診金收入。
     </p>
 
-    <textarea
-      rows="4"
-      readonly
-      :value="apReminder"
-      @focus="$el.select()">
-    </textarea>
+    <p>
+      已取消及失約仍保留記錄。顯示後會以淡色及刪除線標示，
+      不代表仍然佔用有效預約時段。
+    </p>
 
-    <button type="button" @click="apReminder=''">
-      關閉
-    </button>
-  </div>
+    <p>
+      本版沒有拖拉改期。改期請開啟預約，修改日期／時間後儲存。
+      時間表涵蓋 00:00–24:00，可上下捲動。
+    </p>
+  </details>
 
-  <!-- 更改紀錄 -->
-  <div class="panel stack" x-show="apHistoryTitle">
-    <div class="bar">
-      <h2 x-text="apHistoryTitle"></h2>
+  <!-- 右側編輯面板 -->
+  <dialog
+    class="aw-drawer"
+    x-ref="awDialog"
+    aria-labelledby="aw-editor-title"
+    @cancel.prevent="awClose()">
+
+    <div class="aw-drawer-head">
+      <div>
+        <h2
+          id="aw-editor-title"
+          x-text="apForm.version>0 ? '預約詳情／修改' : '新增預約'">
+        </h2>
+
+        <small
+          x-show="apForm.version>0"
+          x-text="'記錄版本 '+apForm.version">
+        </small>
+      </div>
 
       <button
         type="button"
-        @click="apHistoryTitle=''; apEvents=[]">
-        關閉
+        aria-label="關閉編輯面板"
+        @click="awClose()">
+        ✕
       </button>
     </div>
 
-    <p class="muted">
-      保留改期及狀態變更前後資料；
-      姓名／電話只記錄「曾修改」，不在此複製舊值。
-      此紀錄不包含瀏覽或複製提醒的操作。
-    </p>
+    <div class="aw-drawer-content">
 
-    <template x-for="event in apEvents" :key="event.id">
-      <div class="panel">
-        <strong
-          x-text="apDateTime(event.created_at)+' · '+
-            (event.action==='created' ? '建立預約' : '修改預約')">
-        </strong>
-
-        <p
-          class="muted"
-          x-text="'操作帳戶：'+(event.actor_id || '資料庫管理操作')">
-        </p>
-
-        <p
-          x-show="event.old_schedule"
-          x-text="'之前：'+apScheduleText(event.old_schedule)">
-        </p>
-
-        <p
-          x-text="'之後：'+apScheduleText(event.new_schedule)">
-        </p>
-
-        <p
-          class="muted"
-          x-show="event.patient_details_changed">
-          此次亦修改了病人姓名／編號或聯絡電話。
-        </p>
+      <!-- modal 開啟時，也要在面板內顯示錯誤 -->
+      <div
+        class="notice error"
+        role="alert"
+        x-show="apError"
+        x-text="apError">
       </div>
-    </template>
-  </div>
 
+      <div
+        class="notice success"
+        role="status"
+        x-show="apNotice"
+        x-text="apNotice">
+      </div>
+
+      <p x-show="apBusy" role="status">
+        正在處理，請稍候……
+      </p>
+
+      <form
+        class="stack"
+        x-ref="apEditor"
+        autocomplete="off"
+        @submit.prevent="apSave()">
+
+        <div class="aw-editor-grid">
+
+          <label class="aw-span-2">
+            病人姓名或病歷編號 *
+            <input
+              x-ref="awPatient"
+              x-model="apForm.patient_label"
+              maxlength="100"
+              placeholder="只填識別預約所需資料"
+              required>
+          </label>
+
+          <label class="aw-span-2">
+            聯絡電話
+            <input
+              type="tel"
+              x-model="apForm.phone"
+              maxlength="32"
+              autocomplete="off"
+              placeholder="可留空">
+          </label>
+
+          <label class="aw-span-2">
+            診所 *
+            <select
+              x-model="apForm.clinic_id"
+              @change="apForm.schedule_checked=false"
+              required>
+
+              <option value="">請選擇</option>
+
+              <template
+                x-if="apForm.version>0 &&
+                  !clinics.some(c =>
+                    String(c.id)===String(apForm.clinic_id)
+                  )">
+                <option
+                  :value="apForm.clinic_id"
+                  x-text="apForm.clinic_name+'（原有診所）'">
+                </option>
+              </template>
+
+              <template x-for="c in clinics" :key="c.id">
+                <option
+                  :value="String(c.id)"
+                  x-text="c.name">
+                </option>
+              </template>
+            </select>
+          </label>
+
+          <label>
+            日期 *
+            <input
+              type="date"
+              x-model="apForm.date"
+              @change="apForm.schedule_checked=false"
+              required>
+          </label>
+
+          <label>
+            預約類型 *
+            <select
+              x-model="apForm.kind"
+              @change="apSetEnd()">
+
+              <template x-for="kind in apKinds" :key="kind[0]">
+                <option
+                  :value="kind[0]"
+                  x-text="kind[1]+' · '+kind[2]+' 分鐘'">
+                </option>
+              </template>
+            </select>
+          </label>
+
+          <label>
+            開始時間 *
+            <input
+              type="time"
+              step="60"
+              x-model="apForm.start"
+              @change="apSetEnd()"
+              required>
+          </label>
+
+          <label>
+            結束時間 *
+            <input
+              type="time"
+              step="60"
+              x-model="apForm.end"
+              @change="apForm.schedule_checked=false"
+              required>
+          </label>
+
+          <label class="aw-span-2">
+            預約狀態
+            <select x-model="apForm.status">
+              <template x-for="status in apStatuses" :key="status[0]">
+                <option
+                  :value="status[0]"
+                  x-text="status[1]">
+                </option>
+              </template>
+            </select>
+          </label>
+
+        </div>
+
+        <!-- 保留原有更表核對 -->
+        <div
+          class="aw-schedule"
+          :class="{
+            'is-ok':apSchedule.level==='ok',
+            'is-warning':['warn','unknown'].includes(apSchedule.level),
+            'is-error':apSchedule.level==='block'
+          }"
+          role="status"
+          aria-live="polite">
+
+          <strong
+            x-text="
+              apSchedule.level==='ok' ? '✓ 符合返工安排' :
+              apSchedule.level==='warn' ? '需要另外確認' :
+              apSchedule.level==='block' ? '不能儲存' :
+              apSchedule.level==='unknown' ? '無法核對' :
+              apSchedule.level==='loading' ? '正在核對……' :
+              apSchedule.level==='skip' ? '取消預約' :
+              '返工安排核對'
+            ">
+          </strong>
+
+          <template x-for="(message,index) in apSchedule.messages" :key="index">
+            <div
+              style="margin-top:6px"
+              x-text="message">
+            </div>
+          </template>
+
+          <button
+            type="button"
+            style="margin-top:10px"
+            @click="apQueueSchedule()">
+            重新核對更表
+          </button>
+        </div>
+
+        <label
+          class="aw-check"
+          style="align-items:flex-start"
+          x-show="apForm.status!=='cancelled'">
+
+          <input
+            type="checkbox"
+            x-model="apForm.schedule_checked"
+            :required="apForm.status!=='cancelled'"
+            :disabled="['loading','input','unknown','block'].includes(apSchedule.level)">
+
+          <span>
+            我已核對當日實際返工時間、休假及診所安排。
+          </span>
+        </label>
+
+        <p class="muted" style="font-size:12px">
+          更改類型或開始時間會帶入預設結束時間，之後可自行修改。
+          此處不記錄診斷、身份證號碼或病歷內容。
+        </p>
+
+        <div class="actions aw-editor-actions">
+          <button type="submit" class="primary">
+            儲存預約
+          </button>
+
+          <button type="button" @click="awClose()">
+            放棄／關閉
+          </button>
+        </div>
+      </form>
+
+      <!-- 對已儲存記錄的操作，不使用未儲存表單值 -->
+      <template x-if="awSelected()">
+        <div class="aw-record-actions">
+          <p class="muted" style="font-size:12px">
+            以下操作使用目前已儲存嘅預約資料；
+            改期後請先儲存，再複製提醒。
+          </p>
+
+          <div class="actions">
+            <button
+              type="button"
+              @click="apHistory(awSelected())">
+              更改紀錄
+            </button>
+
+            <button
+              type="button"
+              x-show="!['cancelled','no_show','completed'].includes(awSelected().status)"
+              @click="apCopyReminder(awSelected())">
+              複製提醒
+            </button>
+
+            <button
+              type="button"
+              class="danger"
+              x-show="!['cancelled','no_show','completed'].includes(awSelected().status)"
+              @click="awCancelSelected()">
+              取消預約
+            </button>
+          </div>
+        </div>
+      </template>
+
+      <!-- 手動提醒 -->
+      <div
+        class="panel stack"
+        style="margin-top:18px"
+        x-show="apReminder">
+
+        <h3>預約提醒文字</h3>
+
+        <p class="muted">
+          不會自動發送。請先核對收件人、日期、時間及診所。
+        </p>
+
+        <textarea
+          rows="5"
+          readonly
+          :value="apReminder"
+          @focus="$el.select()">
+        </textarea>
+
+        <button type="button" @click="apReminder=''">
+          收起提醒
+        </button>
+      </div>
+
+      <!-- 更改紀錄 -->
+      <div
+        class="panel stack"
+        style="margin-top:18px"
+        x-show="apHistoryTitle">
+
+        <div class="bar">
+          <h3 x-text="apHistoryTitle"></h3>
+
+          <button
+            type="button"
+            @click="apHistoryTitle=''; apEvents=[]">
+            收起紀錄
+          </button>
+        </div>
+
+        <p class="muted" style="font-size:12px">
+          姓名／電話只標示曾修改，不複製舊值。
+          此處不包含瀏覽或複製提醒操作。
+        </p>
+
+        <p
+          class="muted"
+          x-show="apHistoryTitle && !apEvents.length">
+          沒有可顯示紀錄。
+        </p>
+
+        <template x-for="event in apEvents" :key="event.id">
+          <div class="panel">
+            <strong
+              x-text="apDateTime(event.created_at)+' · '+
+                (event.action==='created' ? '建立預約' : '修改預約')">
+            </strong>
+
+            <p
+              class="muted"
+              x-text="'操作帳戶：'+(event.actor_id || '資料庫管理操作')">
+            </p>
+
+            <p
+              x-show="event.old_schedule"
+              x-text="'之前：'+apScheduleText(event.old_schedule)">
+            </p>
+
+            <p
+              x-text="'之後：'+apScheduleText(event.new_schedule)">
+            </p>
+
+            <p
+              class="muted"
+              x-show="event.patient_details_changed">
+              此次亦修改了病人姓名／編號或聯絡電話。
+            </p>
+          </div>
+        </template>
+      </div>
+
+    </div>
+  </dialog>
 </section>
         <!-- 個人資料 -->
         <section x-show="tab==='settings'">
@@ -1328,6 +1541,7 @@ window.addEventListener('error', function(event){
 <script src="./dashboard.js"></script>
 <script src="./appointment-schedule.js"></script>
 <script src="./appointments.js"></script>
+<script src="./appointment-week.js"></script>
 
 <!-- 最後啟動 Alpine -->
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
