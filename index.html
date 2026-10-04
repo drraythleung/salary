@@ -87,6 +87,112 @@ details>summary{cursor:pointer;font-weight:650}
   margin-top: 3px;
   white-space: normal;
 }
+/* Dashboard */
+.dash-cards{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+  margin-bottom:16px;
+}
+.dash-cards .card{
+  padding:18px;
+}
+.dash-cards .amount{
+  font-size:25px;
+  overflow-wrap:anywhere;
+}
+.dash-toolbar{
+  margin-bottom:16px;
+}
+.dash-year{
+  width:110px;
+}
+.dash-legend{
+  display:flex;
+  gap:18px;
+  flex-wrap:wrap;
+  margin-bottom:18px;
+  color:var(--muted);
+  font-size:13px;
+}
+.dash-dot{
+  display:inline-block;
+  width:11px;
+  height:11px;
+  border-radius:3px;
+  margin-right:5px;
+}
+.dash-dot.budget,
+.dash-fill.budget{
+  background:#a8c8e8;
+}
+.dash-dot.earned,
+.dash-fill.earned{
+  background:var(--green);
+}
+.dash-chart{
+  display:grid;
+  gap:13px;
+}
+.dash-chart-row{
+  display:grid;
+  grid-template-columns:56px minmax(0,1fr) 155px;
+  align-items:center;
+  gap:12px;
+}
+.dash-month{
+  padding:5px;
+}
+.dash-tracks{
+  display:grid;
+  gap:5px;
+}
+.dash-track{
+  height:10px;
+  overflow:hidden;
+  background:#f0f4f7;
+  border-radius:20px;
+}
+.dash-fill{
+  height:100%;
+  border-radius:20px;
+}
+.dash-chart-value{
+  text-align:right;
+  font-size:13px;
+}
+.dash-table .number{
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+}
+.dash-table tfoot{
+  background:#edf5f1;
+  font-weight:700;
+}
+.dash-current{
+  background:#f0f8f4;
+}
+.dash-warning{
+  color:#9a6700;
+  font-weight:650;
+}
+@media(max-width:1000px){
+  .dash-cards{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+@media(max-width:650px){
+  .dash-cards .amount{
+    font-size:21px;
+  }
+  .dash-chart-row{
+    grid-template-columns:45px minmax(0,1fr) 115px;
+    gap:8px;
+  }
+  .dash-chart-value{
+    font-size:11px;
+  }
+}
 </style>
 </head>
 <body>
@@ -102,7 +208,7 @@ details>summary{cursor:pointer;font-weight:650}
   <noscript>請啟用 JavaScript。</noscript>
 </div>
 
-<main class="wrap" x-data="incomeApp()" x-cloak>
+<main class="wrap" x-data="incomeDashboard(incomeApp())" x-cloak>
   <div x-show="loading" class="panel">正在讀取資料……</div>
   <div x-show="err" class="notice error" role="alert">
     <span x-text="err"></span>
@@ -153,7 +259,231 @@ details>summary{cursor:pointer;font-weight:650}
           Attendance 資料表未能讀取，暫時無法確認返工。
           請檢查原有資料表及權限；未確認收入不會自動當成已賺取。
         </div>
+        
+<!-- Dashboard / 收入總覽 -->
+<section x-show="tab==='dash'">
 
+  <div class="panel">
+    <div class="bar dash-toolbar">
+      <div>
+        <h2 style="margin-bottom:4px">Dashboard／收入總覽</h2>
+        <small>工作收入按工作月份；收款按實際收款日期。</small>
+      </div>
+
+      <div class="actions">
+        <button type="button"
+          :disabled="dashBusy"
+          @click="changeDashYear(-1)">
+          ‹ 上一年
+        </button>
+
+        <label>
+          年份
+          <input class="dash-year"
+            type="number"
+            min="1900"
+            max="9998"
+            step="1"
+            x-model.number="dashYear"
+            :disabled="dashBusy"
+            @change="refreshDashboard()">
+        </label>
+
+        <button type="button"
+          :disabled="dashBusy"
+          @click="changeDashYear(1)">
+          下一年 ›
+        </button>
+
+        <button type="button"
+          :disabled="dashBusy"
+          @click="dashYear=Number(todayDate().slice(0,4)); refreshDashboard()">
+          今年
+        </button>
+
+        <button type="button"
+          class="primary"
+          :disabled="dashBusy"
+          @click="refreshDashboard()">
+          更新總覽
+        </button>
+      </div>
+    </div>
+
+    <p class="muted" x-show="dashUpdated && dashReady"
+      x-text="'最後更新：'+dashUpdated"></p>
+
+    <p x-show="dashBusy" role="status">正在讀取全年資料……</p>
+
+    <div class="notice error"
+      x-show="dashError"
+      role="alert"
+      x-text="dashError"></div>
+  </div>
+
+  <template x-if="dashReady && !dashBusy">
+    <div>
+      <div class="dash-cards">
+
+        <article class="card">
+          <strong>全年預計基本收入</strong>
+          <div class="amount" x-text="money(dashTotal('budget'))"></div>
+          <small>按排班時薪／固定金額，不包括估算分成。</small>
+        </article>
+
+        <article class="card dark">
+          <strong>全年已確認收入</strong>
+          <div class="amount" x-text="money(dashTotal('earned'))"></div>
+          <small>已確認基本收入＋已填實際分成，包括未收款。</small>
+        </article>
+
+        <article class="card">
+          <strong>全年實際收款</strong>
+          <div class="amount" x-text="money(dashTotal('cash'))"></div>
+          <small>按收款日期，可包括其他工作年份嘅發票。</small>
+        </article>
+
+        <article class="card">
+          <strong>該工作年份已發送未收</strong>
+          <div class="amount" x-text="money(dashTotal('outstanding'))"></div>
+          <small>只計已發送未收款發票，不包括草稿及未開單收入。</small>
+        </article>
+
+      </div>
+
+      <div class="notice">
+        <strong>計算說明：</strong>
+        「已確認收入」唔等於「收到錢」。
+        分成待填時，只計已知金額，唔會用估算補上。
+        <span x-show="dashTotal('pending')>0"
+          x-text="' 尚有 '+dashTotal('pending')+' 筆已確認工作嘅分成資料／設定未完整。'">
+        </span>
+      </div>
+
+      <div class="notice"
+        x-show="dashPaymentWarnings>0"
+        x-text="'有 '+dashPaymentWarnings+' 張已收款發票嘅收款日期缺漏、無效或屬未來日期，未計入收款統計。請到發票頁檢查。'">
+      </div>
+
+      <div class="panel">
+        <h2 x-text="dashYear+' 年 · 每月收入比較'"></h2>
+
+        <div class="dash-legend">
+          <span><i class="dash-dot budget"></i>預計基本收入</span>
+          <span><i class="dash-dot earned"></i>已確認收入</span>
+        </div>
+
+        <div class="dash-chart">
+          <template x-for="r in dashRows" :key="r.month">
+            <div class="dash-chart-row">
+
+              <button type="button"
+                class="dash-month"
+                @click="run(()=>openDashMonth(r.month))"
+                x-text="r.month+'月'"></button>
+
+              <div class="dash-tracks" aria-hidden="true">
+                <div class="dash-track">
+                  <div class="dash-fill budget"
+                    :style="{width:dashWidth(r.budget)}"></div>
+                </div>
+                <div class="dash-track">
+                  <div class="dash-fill earned"
+                    :style="{width:dashWidth(r.earned)}"></div>
+                </div>
+              </div>
+
+              <div class="dash-chart-value">
+                <strong x-text="money(r.earned)"></strong>
+                <div class="muted" x-text="'預 '+money(r.budget)"></div>
+              </div>
+
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <div class="panel scroll">
+        <h2>每月明細</h2>
+        <p class="muted">「待填」按日期＋診所計算，同日同診所唔會因為有兩節而重複計數。</p>
+
+        <table class="dash-table">
+          <thead>
+            <tr>
+              <th>工作月份</th>
+              <th class="number">預計基本收入</th>
+              <th class="number">已確認基本收入</th>
+              <th class="number">已填實際分成</th>
+              <th class="number">已確認收入</th>
+              <th class="number">該月實際收款</th>
+              <th class="number">該工作月已發送未收</th>
+              <th class="number">分成待填</th>
+              <th></th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <template x-for="r in dashRows" :key="r.month">
+              <tr :class="{'dash-current':r.prefix===todayDate().slice(0,7)}">
+                <td x-text="r.month+' 月'"></td>
+                <td class="number" x-text="money(r.budget)"></td>
+                <td class="number" x-text="money(r.base)"></td>
+                <td class="number" x-text="money(r.share)"></td>
+                <td class="number">
+                  <strong x-text="money(r.earned)"></strong>
+                </td>
+                <td class="number" x-text="money(r.cash)"></td>
+                <td class="number" x-text="money(r.outstanding)"></td>
+                <td class="number"
+                  :class="{'dash-warning':r.pending>0}"
+                  x-text="r.pending ? r.pending+' 筆' : '—'"></td>
+                <td>
+                  <button type="button"
+                    @click="run(()=>openDashMonth(r.month))">
+                    查看月份
+                  </button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+
+          <tfoot>
+            <tr>
+              <td>全年合計</td>
+              <td class="number" x-text="money(dashTotal('budget'))"></td>
+              <td class="number" x-text="money(dashTotal('base'))"></td>
+              <td class="number" x-text="money(dashTotal('share'))"></td>
+              <td class="number" x-text="money(dashTotal('earned'))"></td>
+              <td class="number" x-text="money(dashTotal('cash'))"></td>
+              <td class="number" x-text="money(dashTotal('outstanding'))"></td>
+              <td class="number" x-text="dashTotal('pending')+' 筆'"></td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="panel">
+        <h2>其他資料</h2>
+        <p>
+          所選工作年份嘅發票草稿：
+          <strong x-text="money(dashTotal('draft'))"></strong>
+          <span class="muted">（未計入已發送未收）</span>
+        </p>
+        <p class="muted">
+          歷史工作收入按目前診所時薪、分成百分比及排班設定重新計算，
+          唔係已鎖定嘅歷史帳目。修改設定或刪除舊排班，可能改變過往月份金額。
+          發票及收款統計則使用已儲存嘅發票總額。
+        </p>
+        <p class="muted">
+          預計排班亦依賴 holidays.js 嘅假期資料；
+          請確保已包含所選年份，否則預計收入可能偏高。
+        </p>
+      </div>
+
+    </div>
+  </template>
+</section>
         <!-- 收入及月曆 -->
         <section x-show="tab==='home'">
           <div class="grid">
@@ -465,7 +795,7 @@ details>summary{cursor:pointer;font-weight:650}
           <div class="panel stack">
             <h2>按診所產生本月發票</h2>
             <label>發出日期<input type="date" x-model="issueDate" required></label>
-            <p class="muted">此版保留原有「每診所每月一張」格式。全部工作須已確認、所需分成已填，才可開單；不用估算金額開單。</p>
+            <p class="muted">全部工作須已確認、所需分成已填，才可開單；並不會使用估算金額開單。</p>
             <template x-for="item in invRows()" :key="item.r.clinic.id">
               <div class="bar">
                 <span x-text="item.r.clinic.name"></span>
