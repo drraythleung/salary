@@ -990,7 +990,24 @@ details>summary{cursor:pointer;font-weight:650}
             : '預約資料尚未載入完成'">
       </span>
     </div>
+<!-- 更表載入狀態：與病人預約載入結果分開顯示 -->
+    <div style="padding:0 16px">
+      <p
+        class="aw-work-status"
+        x-show="awWorkLoading"
+        x-cloak
+        role="status">
+        正在載入返工更表……
+      </p>
 
+      <p
+        class="aw-work-status aw-work-status--error"
+        x-show="awWorkError"
+        x-text="awWorkError"
+        x-cloak
+        role="alert">
+      </p>
+    </div>
     <!-- 診所顏色 -->
     <div class="aw-legend" x-show="awLegend().length">
       <template x-for="item in awLegend()" :key="item.id">
@@ -1010,8 +1027,8 @@ details>summary{cursor:pointer;font-weight:650}
     <div
       class="aw-scroll"
       x-ref="awScroll"
-      :aria-busy="apBusy"
-      aria-label="預約時間表">
+      :aria-busy="apBusy || awWorkLoading"
+      aria-label="預約及返工時間表">
 
       <div class="aw-board">
 
@@ -1035,6 +1052,27 @@ details>summary{cursor:pointer;font-weight:650}
                 :title="day.date"
                 x-text="day.number">
               </strong>
+
+              <!--
+                休假／取消／未有確實起訖時間的更次。
+                放在日期標題，不猜測時間放入時間格。
+              -->
+              <div
+                class="aw-work-notes"
+                x-show="awWorkMessages(day.date).length">
+
+                <template
+                  x-for="message in awWorkMessages(day.date)"
+                  :key="message">
+
+                  <div
+                    class="aw-work-note"
+                    x-text="message">
+                  </div>
+
+                </template>
+              </div>
+
             </div>
           </template>
         </div>
@@ -1054,19 +1092,18 @@ details>summary{cursor:pointer;font-weight:650}
 
           <template x-for="day in awDays()" :key="day.date">
             <div
-              class="aw-daycol"
+              class="aw-daycol aw-work-column"
               :class="{'is-today':day.today}">
 
               <!--
-                滑鼠／觸控快捷新增。
-                鍵盤使用者可由上方「新增預約」輸入日期時間，
-                避免 Tab 要穿過整週 672 個空格。
+                空白時間格。
+                鍵盤使用者可由上方「新增預約」輸入日期時間。
               -->
               <template x-for="minute in awSlots" :key="minute">
                 <button
                   type="button"
                   tabindex="-1"
-                  class="aw-slot"
+                  class="aw-slot aw-grid-slot"
                   :class="{'aw-hourline':minute%60===0}"
                   :disabled="!apReady || apBusy"
                   :aria-label="day.date+' '+awHM(minute)+' 新增預約'"
@@ -1075,11 +1112,39 @@ details>summary{cursor:pointer;font-weight:650}
                 </button>
               </template>
 
-              <!-- 預約卡 -->
-              <template x-for="event in awEvents(day.date)" :key="event.row.id">
+              <!--
+                已知返工時段。
+                點擊帶入日期、診所及這段更次的開始時間。
+              -->
+              <template
+                x-for="work in awWorkBands(day.date)"
+                :key="work.id">
+
                 <button
                   type="button"
-                  class="aw-event"
+                  class="aw-work-band"
+                  :style="work.style"
+                  :title="work.label+'；點擊按更次開始時間建立預約'"
+                  :aria-label="work.date+' '+work.label+'，按更次開始時間建立預約'"
+                  :disabled="!apReady || apBusy || busy || loading || !session"
+                  @click.stop="awCreateFromWork(work)">
+
+                  <span
+                    class="aw-work-band__label"
+                    x-text="'返工 '+work.label">
+                  </span>
+
+                </button>
+              </template>
+
+              <!-- 預約卡：保留現有內容及操作 -->
+              <template
+                x-for="event in awEvents(day.date)"
+                :key="event.row.id">
+
+                <button
+                  type="button"
+                  class="aw-event aw-booking-card"
                   :class="{
                     'is-compact':event.compact,
                     'is-inactive':awInactive(event.row)
@@ -1104,6 +1169,7 @@ details>summary{cursor:pointer;font-weight:650}
                     x-show="event.end-event.start>=45"
                     x-text="event.row.clinic_name+' · '+apStatusLabel(event.row.status)">
                   </small>
+
                 </button>
               </template>
 
@@ -1114,14 +1180,16 @@ details>summary{cursor:pointer;font-weight:650}
       </div>
     </div>
 
-    <div class="aw-footer">
+<div class="aw-footer">
       點空白時段新增；點預約卡修改。
-      搜尋涵蓋目前日／週視圖。卡片顏色代表診所。
+      返工底色標示已知更次，點擊會帶入診所及該段更次的開始時間，
+      可在編輯面板修改。
+      搜尋用於病人預約，不會隱藏返工更表。
+
       <span x-show="apReady && !awRows().length">
-        目前篩選條件下沒有預約。
+        目前篩選條件下沒有預約，不代表當日沒有返工安排。
       </span>
     </div>
-  </div>
 
   <details class="aw-help">
     <summary>使用說明及注意事項</summary>
