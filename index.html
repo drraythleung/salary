@@ -92,8 +92,8 @@ details>summary{cursor:pointer;font-weight:650}
 <body>
 <header>
   <div class="wrap">
-    <strong>Dr Ray Leung Limited 梁子恒醫生有限公司</strong>
-    <small> Job Management System 工作管理系統</small>
+    <strong>Dr Ray Leung Limited</strong>
+    <small> Job Management System</small>
   </div>
 </header>
 
@@ -173,7 +173,6 @@ details>summary{cursor:pointer;font-weight:650}
           <div class="notice">
             先在日期明細按「確認返工」，時薪方會計入實際收入。
             分成留空代表待填，不會以估算代替。診金記錄請同時填兩項；確定冇收入先填 0。
-            <br>
             <strong x-text="`已確認返工但分成待填：${pendingCount()} 筆`"></strong>
           </div>
 
@@ -342,7 +341,7 @@ details>summary{cursor:pointer;font-weight:650}
                 <label>每日估算診金<input type="number" min="0" step=".01" x-model="c.est_consult_per_day"></label>
                 <label>每日估算小手術<input type="number" min="0" step=".01" x-model="c.est_procedure_per_day"></label>
                 <label>付款期限（日）<input type="number" min="1" step="1" x-model="c.payment_terms_days" required></label>
-                <label>Invoice 抬頭<input x-model="c.bill_name"></label>
+                <label>發票抬頭<input x-model="c.bill_name"></label>
                 <label>帳單地址<input x-model="c.bill_address"></label>
                 <label>聯絡人<input x-model="c.contact_name"></label>
                 <label>聯絡 Email<input type="email" x-model="c.contact_email"></label>
@@ -464,7 +463,7 @@ details>summary{cursor:pointer;font-weight:650}
         <!-- Invoice -->
         <section x-show="tab==='inv'">
           <div class="panel stack">
-            <h2>按診所產生本月 Invoice</h2>
+            <h2>按診所產生本月發票</h2>
             <label>發出日期<input type="date" x-model="issueDate" required></label>
             <p class="muted">此版保留原有「每診所每月一張」格式。全部工作須已確認、所需分成已填，才可開單；不用估算金額開單。</p>
             <template x-for="item in invRows()" :key="item.r.clinic.id">
@@ -472,12 +471,12 @@ details>summary{cursor:pointer;font-weight:650}
                 <span x-text="item.r.clinic.name"></span>
                 <button class="primary" :disabled="!!item.inv"
                   @click="run(()=>invoiceChecked(item.r))"
-                  x-text="item.inv?'本月已開單':'檢查並產生 Invoice'"></button>
+                  x-text="item.inv?'本月已開單':'檢查並產生發票'"></button>
               </div>
             </template>
           </div>
           <div class="panel">
-            <h2>本月 Invoice</h2>
+            <h2>本月發票</h2>
             <template x-for="i in invoices.filter(i=>i.year===y&&i.month===m)" :key="i.id">
               <div class="panel stack">
                 <div class="bar">
@@ -518,7 +517,7 @@ details>summary{cursor:pointer;font-weight:650}
               </template>
             </div>
             <label>地址<textarea x-model="profile.address"></textarea></label>
-            <label>Invoice 頁尾備註<textarea x-model="profile.footer_note"></textarea></label>
+            <label>發票頁尾備註<textarea x-model="profile.footer_note"></textarea></label>
             <label>簽名圖片<input type="file" accept="image/*" @change="pickSignature($event)"></label>
             <template x-if="profile.signature">
               <img :src="profile.signature" alt="簽名預覽" style="max-width:220px;max-height:90px">
@@ -561,8 +560,8 @@ function incomeApp(){
       ['rec','每日診金'],
       ['clinics','診所'],
       ['rules','固定更'],
-      ['adjust','休假／加節'],
-      ['inv','Invoice'],
+      ['adjust','休假／加班'],
+      ['inv','發票'],
       ['settings','個人設定']
     ],
     profileFields:[
@@ -692,7 +691,7 @@ function incomeApp(){
       }
       const [year,month]=f.date.split('-').map(Number);
       if(this.invoices.some(i=>i.clinic_id===f.clinic_id&&i.year===year&&i.month===month)){
-        return this.fail('此診所月份已有 Invoice。為免單據與收入不一致，不能直接修改；草稿可先刪除再重建。');
+        return this.fail('此診所月份已有發票。為免單據與收入不一致，不能直接修改；草稿可先刪除再重建。');
       }
       const {error}=await db.from('daily_logs').upsert({
         clinic_id:f.clinic_id,date:f.date,
@@ -725,7 +724,7 @@ function incomeApp(){
 
     async invoiceChecked(row){
       const c=row.clinic;
-      if(this.invOf(c.id))return this.fail('此診所本月已有 Invoice。');
+      if(this.invOf(c.id))return this.fail('此診所本月已有發票。');
       if(!this.issueDate)return this.fail('請填發出日期。');
       if(!this.attOk)return this.fail('無法讀取返工確認，暫時不能開單。');
       if(c.procedure_pct==null){
@@ -737,7 +736,7 @@ function incomeApp(){
       if(!dates.size)return this.fail('本月沒有可開單記錄。');
       for(const date of dates){
         if(date>this.todayDate()){
-          return this.fail('本月仍有未來排班，尚未能產生全月 Invoice。');
+          return this.fail('本月仍有未來排班，尚未能產生全月發票。');
         }
         if(!this.att.some(a=>a.clinic_id===c.id&&a.date===date)){
           return this.fail(`${date} 尚未確認返工，請先到月曆確認。`);
@@ -753,7 +752,7 @@ function incomeApp(){
         c,this.y,this.m,this.result.sessions,this.logs,this.issueDate
       );
       if(!Number.isFinite(inv.total)||inv.total<0){
-        return this.fail('Invoice 金額無效，請檢查設定。');
+        return this.fail('發票金額無效，請檢查設定。');
       }
       if(!confirm(`產生 ${c.name} Invoice，合共 ${this.money(inv.total)}？`))return;
       return await this.add('invoices',{
