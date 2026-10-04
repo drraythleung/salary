@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#173e37">
-<title>診金預算及 Invoice 管理</title>
+<title>Dr. Ray Leung Limited — Job Management</title>
 <style>
 :root{--bg:#f4f7fa;--ink:#172b3a;--muted:#687e8b;--line:#e1e9ee;--green:#197563;--dark:#173e37}
 *{box-sizing:border-box}
@@ -92,8 +92,8 @@ details>summary{cursor:pointer;font-weight:650}
 <body>
 <header>
   <div class="wrap">
-    <strong>＋ 診金預算及 Invoice 管理</strong>
-    <small>Supabase 雲端版</small>
+    <strong>Dr Ray Leung Limited 梁子恒醫生有限公司</strong>
+    <small> Job Management System 工作管理系統</small>
   </div>
 </header>
 
@@ -115,7 +115,7 @@ details>summary{cursor:pointer;font-weight:650}
     <template x-if="!session && !loading">
       <form class="panel login stack" @submit.prevent="run(()=>signIn())">
         <h2>登入</h2>
-        <p class="muted">使用原有 Supabase 帳戶。</p>
+        <p class="muted">請使用公司電郵地址</p>
         <label>Email
           <input type="email" x-model="email" autocomplete="username" required>
         </label>
@@ -150,7 +150,7 @@ details>summary{cursor:pointer;font-weight:650}
         </nav>
 
         <div class="notice" x-show="!attOk">
-          attendance 資料表未能讀取，暫時無法確認返工。
+          Attendance 資料表未能讀取，暫時無法確認返工。
           請檢查原有資料表及權限；未確認收入不會自動當成已賺取。
         </div>
 
@@ -158,20 +158,20 @@ details>summary{cursor:pointer;font-weight:650}
         <section x-show="tab==='home'">
           <div class="grid">
             <article class="card">
-              <strong>Estimated Income</strong>
-              <div>本月預計收入</div>
+              <strong>本月預計收入</strong>
+              <div>按本月排班之工作時薪計算，未計任何佣金分成</div>
               <div class="amount" x-text="money(monthBudget())"></div>
-              <small>全月排班時薪／固定金額＋估算分成；不以實際分成覆蓋。</small>
+              <small>以上金額為最底收入，不以實際收入覆蓋。</small>
             </article>
             <article class="card dark">
-              <strong>Real Gross Income</strong>
-              <div>本月實際總收入 · 已確認部分</div>
+              <strong>本月實際總收入</strong>
+              <div>按本月已確認之工作及佣金分成計算</div>
               <div class="amount" x-text="money(gross())"></div>
-              <small>只計已確認返工及已知金額，未扣開支，包括未收款。</small>
+              <small>以上金額亦包括未收款。</small>
             </article>
           </div>
           <div class="notice">
-            先在日期明細按「確認返工」，時薪／固定金額先會計入實際收入。
+            先在日期明細按「確認返工」，時薪方會計入實際收入。
             分成留空代表待填，不會以估算代替。診金記錄請同時填兩項；確定冇收入先填 0。
             <br>
             <strong x-text="`已確認返工但分成待填：${pendingCount()} 筆`"></strong>
