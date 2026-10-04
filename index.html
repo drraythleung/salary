@@ -864,10 +864,11 @@ details>summary{cursor:pointer;font-weight:650}
     </div>
 
     <div class="notice">
-      此版本未自動核對固定更、加節及休假。
-      儲存前請核對實際返工時段。
-      修改更表不會自動更改病人預約；
-      完成預約亦不會自動加入診金收入。
+  儲存前會嘗試重新核對更表，請留意下方核對結果。
+  如資料不足或需要另外確認，請先核實實際返工時段、
+  診所及休假安排；無法核對時暫停儲存。
+  修改更表不會自動更改病人預約；
+  完成預約亦不會自動加入診金收入。
     </div>
 
     <div
@@ -1088,13 +1089,20 @@ details>summary{cursor:pointer;font-weight:650}
       之後仍可自行修改。此處不記錄診斷、身份證號碼或病歷內容。
     </p>
 
-    <label>
-      <input
-        type="checkbox"
-        x-model="apForm.schedule_checked"
-        required>
-      我已核對當日實際返工時間、休假及診所安排。
-    </label>
+<label x-show="apForm.status !== 'cancelled'">
+  <input
+    type="checkbox"
+    x-model="apForm.schedule_checked"
+    :required="apForm.status !== 'cancelled'"
+    :disabled="apForm.status === 'cancelled'">
+  我已核對當日實際返工時間、休假及診所安排。
+</label>
+
+<p
+  class="muted"
+  x-show="apForm.status === 'cancelled'">
+  取消預約毋須勾選返工安排確認；儲存後保留預約記錄。
+</p>
 
     <div class="actions">
       <button type="submit" class="primary">
