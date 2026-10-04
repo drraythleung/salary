@@ -1345,23 +1345,11 @@ details>summary{cursor:pointer;font-weight:650}
           </button>
         </div>
 
-        <label
-          class="aw-check"
-          style="align-items:flex-start"
-          x-show="apForm.status!=='cancelled'">
 
-          <input
-            type="checkbox"
-            x-model="apForm.schedule_checked"
-            :required="apForm.status!=='cancelled'"
-            :disabled="['loading','input','unknown','block'].includes(apSchedule.level)">
-
-          <span>
-            我已核對當日實際返工時間、休假及診所安排。
-          </span>
-        </label>
 
         <p class="muted" style="font-size:12px">
+          儲存時會自動重新核對返工時段及休假安排，毋須勾選確認。
+          如核對結果有警告，系統會要求額外確認。
           更改類型或開始時間會帶入預設結束時間，之後可自行修改。
           此處不記錄診斷、身份證號碼或病歷內容。
         </p>
