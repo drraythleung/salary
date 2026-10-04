@@ -102,7 +102,69 @@ window.incomeAppointments = function(base) {
     apEvents: [],
     apHistoryTitle: '',
     apReminder: '',
+apSchedule: {
+  level: 'input',
+  messages: ['請選擇日期、診所及時間。']
+},
+apScheduleSeq: 0,
+apScheduleTimer: null,
 
+apScheduleKey() {
+  const f = this.apForm;
+
+  return JSON.stringify([
+    f.id,
+    f.date,
+    f.clinic_id,
+    f.start,
+    f.end,
+    f.status
+  ]);
+},
+
+apQueueSchedule() {
+  clearTimeout(this.apScheduleTimer);
+
+  // 即時令舊查詢失效，唔等下一次查詢開始。
+  this.apScheduleSeq++;
+  this.apForm.schedule_checked = false;
+
+  if (!this.session) {
+    this.apSchedule = {
+      level: 'input',
+      messages: ['請先登入。']
+    };
+    return;
+  }
+
+  this.apSchedule = {
+    level: 'loading',
+    messages: ['正在核對更表……']
+  };
+
+  this.apScheduleTimer = setTimeout(() => {
+    this.apPreviewSchedule();
+  }, 300);
+},
+
+async apPreviewSchedule() {
+  const seq = ++this.apScheduleSeq;
+  const user = this.session?.user?.id;
+  const key = this.apScheduleKey();
+  const form = { ...this.apForm };
+
+  if (!user) return;
+
+  const checked = await AppointmentSchedule.check(db, form);
+
+  if (
+    seq !== this.apScheduleSeq ||
+    user !== this.session?.user?.id ||
+    key !== this.apScheduleKey()
+  ) return;
+
+  this.apSchedule = checked;
+},
     apInit() {
       this.apUser = this.session?.user?.id || '';
       this.apNew();
@@ -129,9 +191,28 @@ window.incomeAppointments = function(base) {
       if (this.session && this.tab === 'appt') {
         this.apRefresh();
       }
+      this.$watch('apScheduleKey()', () => {
+  this.apQueueSchedule();
+});
+
+this.$watch('tab', value => {
+  if (value === 'appt') this.apQueueSchedule();
+});
+
+this.$watch('session', () => {
+  this.apQueueSchedule();
+});
+
+this.apQueueSchedule();
     },
 
     apClear() {
+      clearTimeout(this.apScheduleTimer);
+this.apScheduleSeq++;
+this.apSchedule = {
+  level: 'input',
+  messages: ['請選擇日期、診所及時間。']
+};
       // 使已發出但未完成的請求失效。
       this.apToken++;
       this.apBusy = false;
@@ -467,10 +548,40 @@ window.incomeAppointments = function(base) {
 
     async apSave() {
       return this.apRun(async (alive, user) => {
-        const f = { ...this.apForm };
-        const payload = this.apPayload(f);
+const f = { ...this.apForm };
+const payload = this.apPayload(f);
+const stamp = JSON.stringify(f);
 
-        let result;
+// 儲存前重新讀取，唔只相信畫面上的預覽結果。
+const checked = await AppointmentSchedule.check(db, f);
+
+if (!alive()) return;
+
+// 等待期間改過表單，就唔儲存舊快照。
+if (JSON.stringify(this.apForm) !== stamp) {
+  throw safeError('核對期間表單已改動，請重新核對後再儲存。');
+}
+
+// 防止未完成的預覽覆蓋今次儲存核對結果。
+clearTimeout(this.apScheduleTimer);
+this.apScheduleSeq++;
+this.apSchedule = checked;
+
+if (['input', 'unknown', 'block'].includes(checked.level)) {
+  throw safeError(checked.messages.join('\n'));
+}
+
+if (
+  checked.level === 'warn' &&
+  !confirm(
+    checked.messages.join('\n\n') +
+    '\n\n我已另外確認返工診所、完整時段及休假安排，仍然儲存？'
+  )
+) {
+  return;
+}
+
+let result;
 
         if (f.version > 0) {
           result = await db
