@@ -1,2475 +1,705 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <title>診金預算及 Invoice 管理</title>
-
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: [
-              '-apple-system',
-              'BlinkMacSystemFont',
-              'Inter',
-              'Segoe UI',
-              'Noto Sans HK',
-              'Noto Sans TC',
-              'Arial',
-              'sans-serif'
-            ]
-          }
-        }
-      }
-    };
-  </script>
-
-  <style>
-    [x-cloak] {
-      display: none !important;
-    }
-
-    html {
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-
-    body {
-      min-height: 100vh;
-      background:
-        radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 34rem),
-        radial-gradient(circle at top right, rgba(16, 185, 129, 0.16), transparent 30rem),
-        linear-gradient(180deg, #f8fafc 0%, #eef6ff 52%, #f8fafc 100%);
-    }
-
-    .glass {
-      background: rgba(255, 255, 255, 0.82);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      border: 1px solid rgba(226, 232, 240, 0.9);
-      box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
-    }
-
-    .soft-card {
-      background: rgba(255, 255, 255, 0.92);
-      border: 1px solid rgba(226, 232, 240, 0.95);
-      box-shadow: 0 12px 35px rgba(15, 23, 42, 0.06);
-      border-radius: 1.5rem;
-    }
-
-    .input {
-      width: 100%;
-      border-radius: 0.9rem;
-      border: 1px solid #cbd5e1;
-      background: rgba(255, 255, 255, 0.92);
-      padding: 0.72rem 0.9rem;
-      font-size: 0.95rem;
-      color: #0f172a;
-      outline: none;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-    }
-
-    .input:focus {
-      border-color: #0ea5e9;
-      box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.16);
-      background: #ffffff;
-    }
-
-    .label {
-      display: block;
-      margin-bottom: 0.4rem;
-      font-size: 0.78rem;
-      font-weight: 700;
-      color: #475569;
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.45rem;
-      border-radius: 9999px;
-      padding: 0.72rem 1rem;
-      font-size: 0.9rem;
-      font-weight: 800;
-      line-height: 1;
-      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
-      user-select: none;
-      white-space: nowrap;
-    }
-
-    .btn:active {
-      transform: translateY(1px) scale(0.99);
-    }
-
-    .btn-primary {
-      color: white;
-      background: linear-gradient(135deg, #0284c7, #0f766e);
-      box-shadow: 0 12px 24px rgba(14, 116, 144, 0.22);
-    }
-
-    .btn-primary:hover {
-      box-shadow: 0 16px 30px rgba(14, 116, 144, 0.28);
-    }
-
-    .btn-secondary {
-      color: #0f172a;
-      background: white;
-      border: 1px solid #cbd5e1;
-    }
-
-    .btn-secondary:hover {
-      background: #f8fafc;
-    }
-
-    .btn-danger {
-      color: #fff;
-      background: #e11d48;
-    }
-
-    .btn-danger:hover {
-      background: #be123c;
-    }
-
-    .btn-ghost {
-      color: #334155;
-      background: transparent;
-    }
-
-    .btn-ghost:hover {
-      background: rgba(241, 245, 249, 0.9);
-    }
-
-    .scrollbar-thin::-webkit-scrollbar {
-      height: 8px;
-      width: 8px;
-    }
-
-    .scrollbar-thin::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    .scrollbar-thin::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 999px;
-    }
-
-    .calendar-cell {
-      min-height: 6.25rem;
-    }
-
-    @media (max-width: 640px) {
-      .calendar-cell {
-        min-height: 5.25rem;
-      }
-    }
-
-    @media print {
-      .no-print {
-        display: none !important;
-      }
-
-      body {
-        background: white !important;
-      }
-
-      .soft-card,
-      .glass {
-        box-shadow: none !important;
-        border-color: #e2e8f0 !important;
-      }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#173e37">
+<title>診金預算及 Invoice 管理</title>
+<style>
+:root{--bg:#f4f7fa;--ink:#172b3a;--muted:#687e8b;--line:#e1e9ee;--green:#197563;--dark:#173e37}
+*{box-sizing:border-box}
+[x-cloak]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 system-ui,-apple-system,"Noto Sans TC",sans-serif}
+header{background:white;border-bottom:1px solid var(--line)}
+.wrap{max-width:1180px;margin:auto;padding:18px}
+header .wrap,.bar,.actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+header .wrap,.bar{justify-content:space-between}
+h1{font-size:25px;margin:0}h2{font-size:19px;margin:0 0 14px}h3{font-size:16px}
+p{margin:8px 0}
+small,.muted{color:var(--muted)}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer;background:white;border:1px solid #cbd9df;border-radius:9px;padding:9px 13px;color:var(--ink)}
+button:hover{border-color:var(--green)}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.primary,.tabs button.active{background:var(--green);border-color:var(--green);color:white}
+button.danger{color:#a52d37}
+button:focus-visible,a:focus-visible{outline:3px solid #88bdf0;outline-offset:2px}
+input,select,textarea{width:100%;padding:10px;border:1px solid #cad8df;border-radius:8px;background:white;color:var(--ink)}
+input[type=checkbox]{width:auto}
+label{display:block;font-size:13px}
+label input,label select,label textarea{margin-top:5px}
+fieldset{border:0;padding:0;margin:0;min-width:0}
+.panel{background:white;border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.formgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.card{padding:24px;border-radius:17px;background:#eaf2fc}
+.card.dark{background:var(--dark);color:white}
+.card.dark small{color:#c4ddd4}
+.amount{font-size:35px;font-weight:750;letter-spacing:-1px;margin:10px 0}
+.notice{padding:12px 16px;margin:12px 0;border-radius:10px;background:#fff3d9;color:#79571c;white-space:pre-wrap}
+.error{background:#ffe9eb;color:#942d39}
+.success{background:#e5f5eb;color:#256c45}
+.tabs{display:flex;gap:7px;overflow:auto;padding:16px 0}
+.tabs button{white-space:nowrap}
+.scroll{overflow:auto}
+table{width:100%;border-collapse:collapse;text-align:left;white-space:nowrap}
+td,th{padding:11px;border-bottom:1px solid var(--line)}
+th{font-size:12px;color:var(--muted)}
+.calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.week{text-align:center;color:var(--muted);font-size:12px}
+.day{min-height:92px;padding:8px 5px;text-align:left;font-size:12px;background:#f4f7fa}
+.day span{display:block;overflow:hidden;text-overflow:ellipsis}
+.day.selected{outline:2px solid var(--green)}
+.day.outside{opacity:.4}
+.day.done{background:#e7f5ed}
+.day.pending{background:#fff2d7}
+.day .value{font-size:11px;margin-top:7px;font-weight:bold}
+.login{max-width:420px;margin:35px auto}
+.badge{display:inline-block;padding:3px 8px;border-radius:6px;background:#edf3f5;font-size:12px}
+.stack>*+*{margin-top:12px}
+a{color:var(--green)}
+details>summary{cursor:pointer;font-weight:650}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--dark);color:white;padding:12px 22px;border-radius:10px;z-index:50;max-width:90%}
+@media(max-width:650px){
+.grid{grid-template-columns:1fr}
+.wrap{padding:12px}
+.panel{padding:14px}
+.amount{font-size:30px}
+.day{min-height:78px;font-size:11px}
+.day .value{font-size:9px}
+}
+</style>
 </head>
-
-<body
-  x-data="uiApp()"
-  x-init="uiInit()"
-  x-cloak
-  class="font-sans text-slate-900 selection:bg-sky-200 selection:text-slate-950"
->
-  <!-- Loading overlay -->
-  <div
-    x-show="loading"
-    x-transition.opacity
-    class="fixed inset-0 z-50 flex items-center justify-center bg-white/70 backdrop-blur-sm"
-  >
-    <div class="glass rounded-3xl px-6 py-5 text-center">
-      <div class="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-4 border-sky-200 border-t-sky-600"></div>
-      <p class="text-sm font-bold text-slate-700">載入中...</p>
-    </div>
+<body>
+<header>
+  <div class="wrap">
+    <strong>＋ 診金預算及 Invoice 管理</strong>
+    <small>Supabase 雲端版</small>
   </div>
+</header>
 
-  <!-- Auth screen -->
-  <section
-    x-show="!uiHasUser()"
-    x-transition.opacity
-    class="flex min-h-screen items-center justify-center px-4 py-10"
-  >
-    <div class="w-full max-w-md">
-      <div class="mb-6 text-center">
-        <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-sky-500 to-emerald-500 text-3xl shadow-xl shadow-sky-200">
-          🩺
-        </div>
-        <h1 class="text-3xl font-black tracking-tight text-slate-950">診金預算</h1>
-        <p class="mt-2 text-sm font-medium text-slate-500">
-          更表、每日診金、分成、Invoice 一次過管理
-        </p>
-      </div>
+<div id="boot" class="wrap">
+  正在啟動……
+  <noscript>請啟用 JavaScript。</noscript>
+</div>
 
-      <form @submit.prevent="uiAuth()" class="glass rounded-3xl p-5 sm:p-7">
-        <div class="mb-5">
-          <h2 class="text-xl font-black text-slate-950">登入</h2>
-          <p class="mt-1 text-sm text-slate-500">輸入你 Supabase Auth 嘅 email 及 password。</p>
-        </div>
+<main class="wrap" x-data="incomeApp()" x-cloak>
+  <div x-show="loading" class="panel">正在讀取資料……</div>
+  <div x-show="err" class="notice error" role="alert">
+    <span x-text="err"></span>
+    <button type="button" @click="err=''">關閉</button>
+  </div>
+  <div x-show="ok" class="toast" role="status" x-text="ok"></div>
+  <p x-show="busy" role="status">處理中，請稍候……</p>
 
-        <div class="space-y-4">
-          <label>
-            <span class="label">Email</span>
-            <input
-              type="email"
-              x-model="email"
-              autocomplete="email"
-              class="input"
-              placeholder="you@example.com"
-              required
-            />
-          </label>
-
-          <label>
-            <span class="label">Password</span>
-            <input
-              type="password"
-              x-model="password"
-              autocomplete="current-password"
-              class="input"
-              placeholder="••••••••"
-              required
-            />
-          </label>
-        </div>
-
-        <template x-if="errorMsg">
-          <div class="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
-            <span x-text="errorMsg"></span>
-          </div>
-        </template>
-
-        <div class="mt-6 flex flex-col gap-3 sm:flex-row">
-          <button type="submit" class="btn btn-primary flex-1">
-            登入
-          </button>
-          <button type="button" @click="uiRegister()" class="btn btn-secondary flex-1">
-            註冊
-          </button>
-        </div>
-
-        <p class="mt-5 text-center text-xs leading-relaxed text-slate-400">
-          建議用手機加入主畫面，會似 app 咁用。
-        </p>
+  <fieldset :disabled="busy || loading">
+    <template x-if="!session && !loading">
+      <form class="panel login stack" @submit.prevent="run(()=>signIn())">
+        <h2>登入</h2>
+        <p class="muted">使用原有 Supabase 帳戶。</p>
+        <label>Email
+          <input type="email" x-model="email" autocomplete="username" required>
+        </label>
+        <label>Password
+          <input type="password" x-model="password" autocomplete="current-password" required>
+        </label>
+        <button class="primary" type="submit">登入</button>
       </form>
-    </div>
-  </section>
+    </template>
 
-  <!-- Main app -->
-  <template x-if="uiHasUser()">
-    <div class="min-h-screen pb-24 lg:pb-0">
-      <!-- Top bar -->
-      <header class="sticky top-0 z-40 border-b border-white/70 bg-white/75 backdrop-blur-xl no-print">
-        <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          <div class="min-w-0">
-            <div class="flex items-center gap-3">
-              <div class="hidden h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-emerald-500 text-xl shadow-lg shadow-sky-100 sm:flex">
-                🩺
-              </div>
-              <div class="min-w-0">
-                <p class="truncate text-xs font-black uppercase tracking-widest text-sky-700">
-                  Clinic Income
-                </p>
-                <h1 class="truncate text-lg font-black tracking-tight text-slate-950 sm:text-xl">
-                  診金預算及 Invoice
-                </h1>
-              </div>
-            </div>
+    <template x-if="session">
+      <div>
+        <div class="bar">
+          <div>
+            <h1 x-text="`${y} 年 ${m} 月`"></h1>
+            <small x-text="session.user.email"></small>
           </div>
-
-          <div class="flex items-center gap-2">
-            <div class="hidden items-center rounded-full border border-slate-200 bg-white p-1 shadow-sm sm:flex">
-              <button type="button" @click="uiMonthMove(-1)" class="btn btn-ghost px-3 py-2">
-                ‹
-              </button>
-              <button type="button" @click="uiSetToday()" class="btn btn-ghost px-3 py-2">
-                今日
-              </button>
-              <button type="button" @click="uiMonthMove(1)" class="btn btn-ghost px-3 py-2">
-                ›
-              </button>
-            </div>
-
-            <button type="button" @click="uiSignOut()" class="btn btn-secondary px-4 py-3">
-              登出
-            </button>
+          <div class="actions">
+            <button @click="run(()=>shift(-1))">‹ 上月</button>
+            <button @click="run(()=>calToday())">今日</button>
+            <button @click="run(()=>shift(1))">下月 ›</button>
+            <button @click="run(()=>load())">重新讀取</button>
+            <button @click="run(()=>signOut())">登出</button>
           </div>
         </div>
-      </header>
 
-      <div class="mx-auto grid max-w-7xl gap-5 px-4 py-5 sm:px-6 lg:grid-cols-12 lg:px-8">
-        <!-- Desktop sidebar -->
-        <aside class="hidden lg:col-span-3 lg:block xl:col-span-2 no-print">
-          <nav class="glass sticky top-24 rounded-3xl p-2">
-            <template x-for="item in uiNavItems" :key="item.id">
-              <button
-                type="button"
-                @click="uiSetView(item.id)"
-                class="mb-1 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-black transition"
-                :class="uiIsView(item.id)
-                  ? 'bg-slate-950 text-white shadow-lg shadow-slate-200'
-                  : 'text-slate-600 hover:bg-white hover:text-slate-950'"
-              >
-                <span class="text-lg" x-text="item.icon"></span>
-                <span x-text="item.label"></span>
-              </button>
-            </template>
-          </nav>
-        </aside>
-
-        <!-- Main content -->
-        <main class="lg:col-span-9 xl:col-span-10">
-          <!-- Month hero -->
-          <section class="glass mb-5 overflow-hidden rounded-3xl">
-            <div class="bg-gradient-to-br from-slate-950 via-sky-950 to-teal-900 p-5 text-white sm:p-7">
-              <div class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-                <div>
-                  <p class="text-xs font-black uppercase tracking-widest text-sky-200">
-                    Current month
-                  </p>
-                  <div class="mt-2 flex flex-wrap items-center gap-3">
-                    <h2 class="text-3xl font-black tracking-tight sm:text-4xl" x-text="uiMonthLabel()"></h2>
-                    <span class="rounded-full bg-white/15 px-3 py-1 text-xs font-black text-sky-100 ring-1 ring-white/20">
-                      <span x-text="uiCalendarGrid().filter(d => !d.__blank).length"></span> 日
-                    </span>
-                  </div>
-                  <p class="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300">
-                    一眼睇晒預算、實際分成、未填記錄同 invoice 狀態。
-                  </p>
-                </div>
-
-                <div class="flex items-center rounded-full bg-white/10 p-1 ring-1 ring-white/15 sm:hidden">
-                  <button type="button" @click="uiMonthMove(-1)" class="btn px-4 py-3 text-white hover:bg-white/10">
-                    ‹
-                  </button>
-                  <button type="button" @click="uiSetToday()" class="btn px-4 py-3 text-white hover:bg-white/10">
-                    今日
-                  </button>
-                  <button type="button" @click="uiMonthMove(1)" class="btn px-4 py-3 text-white hover:bg-white/10">
-                    ›
-                  </button>
-                </div>
-
-                <div class="rounded-3xl bg-white/10 p-4 ring-1 ring-white/15">
-                  <p class="text-xs font-black uppercase tracking-widest text-sky-200">本月預計</p>
-                  <p class="mt-1 text-3xl font-black tracking-tight" x-text="uiMoney(uiExpectedTotal())"></p>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <!-- DASHBOARD -->
-          <section x-show="uiIsView('dashboard')" x-transition.opacity>
-            <!-- KPI cards -->
-            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <div class="soft-card p-5">
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <p class="text-xs font-black uppercase tracking-widest text-slate-400">預計總收入</p>
-                    <p class="mt-2 text-2xl font-black text-slate-950" x-text="uiMoney(uiExpectedTotal())"></p>
-                  </div>
-                  <div class="rounded-2xl bg-sky-50 p-3 text-xl">💰</div>
-                </div>
-                <p class="mt-4 text-xs font-semibold text-slate-500">包括固定、時薪、估算分成及加節。</p>
-              </div>
-
-              <div class="soft-card p-5">
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <p class="text-xs font-black uppercase tracking-widest text-slate-400">實際分成</p>
-                    <p class="mt-2 text-2xl font-black text-emerald-700" x-text="uiMoney(uiActualTotal())"></p>
-                  </div>
-                  <div class="rounded-2xl bg-emerald-50 p-3 text-xl">✅</div>
-                </div>
-                <p class="mt-4 text-xs font-semibold text-slate-500">根據每日已輸入診金計算。</p>
-              </div>
-
-              <div class="soft-card p-5">
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <p class="text-xs font-black uppercase tracking-widest text-slate-400">估算分成</p>
-                    <p class="mt-2 text-2xl font-black text-cyan-700" x-text="uiMoney(uiEstimatedShare())"></p>
-                  </div>
-                  <div class="rounded-2xl bg-cyan-50 p-3 text-xl">📈</div>
-                </div>
-                <p class="mt-4 text-xs font-semibold text-slate-500">未填實際診金前用設定估算。</p>
-              </div>
-
-              <div class="soft-card p-5">
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <p class="text-xs font-black uppercase tracking-widest text-slate-400">未處理</p>
-                    <p class="mt-2 text-2xl font-black text-amber-700">
-                      <span x-text="uiMissingCount()"></span>
-                      <span class="text-base">項</span>
-                    </p>
-                  </div>
-                  <div class="rounded-2xl bg-amber-50 p-3 text-xl">⚠️</div>
-                </div>
-                <p class="mt-4 text-xs font-semibold text-slate-500">
-                  Invoice 逾期：
-                  <span class="font-black text-rose-600" x-text="uiOverdueCount()"></span>
-                </p>
-              </div>
-            </div>
-
-            <!-- Calendar + selected detail -->
-            <div class="mt-5 grid gap-5 xl:grid-cols-12">
-              <section class="soft-card p-4 sm:p-5 xl:col-span-8">
-                <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h3 class="text-lg font-black text-slate-950">月曆</h3>
-                    <p class="mt-1 text-sm text-slate-500">按日期可睇詳細 session 及金額。</p>
-                  </div>
-
-                  <div class="flex flex-wrap gap-2 text-xs font-black">
-                    <span class="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700 ring-1 ring-emerald-100">已填</span>
-                    <span class="rounded-full bg-amber-50 px-3 py-1 text-amber-700 ring-1 ring-amber-100">待填</span>
-                    <span class="rounded-full bg-sky-50 px-3 py-1 text-sky-700 ring-1 ring-sky-100">預計</span>
-                    <span class="rounded-full bg-slate-50 px-3 py-1 text-slate-500 ring-1 ring-slate-100">休息</span>
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-7 gap-2 text-center text-xs font-black text-slate-400">
-                  <div>一</div>
-                  <div>二</div>
-                  <div>三</div>
-                  <div>四</div>
-                  <div>五</div>
-                  <div>六</div>
-                  <div>日</div>
-                </div>
-
-                <div class="mt-2 grid grid-cols-7 gap-2">
-                  <template x-for="(day, idx) in uiCalendarGrid()" :key="day.__key || idx">
-                    <button
-                      type="button"
-                      class="calendar-cell rounded-2xl border p-2 text-left transition"
-                      :class="uiDayClass(day)"
-                      :disabled="day.__blank"
-                      @click="uiSelectDay(day)"
-                    >
-                      <template x-if="day.__blank">
-                        <div></div>
-                      </template>
-
-                      <template x-if="!day.__blank">
-                        <div class="flex h-full flex-col">
-                          <div class="flex items-start justify-between gap-1">
-                            <span
-                              class="flex h-7 w-7 items-center justify-center rounded-full text-sm font-black"
-                              :class="uiIsToday(day) ? 'bg-slate-950 text-white' : 'text-slate-800'"
-                              x-text="uiDayNumber(day)"
-                            ></span>
-
-                            <span
-                              class="rounded-full px-2 py-1 text-xs font-black"
-                              :class="uiDayStatusClass(day)"
-                              x-text="uiDayStatusLabel(day)"
-                            ></span>
-                          </div>
-
-                          <div class="mt-2 flex flex-wrap gap-1">
-                            <template x-for="clinic in uiDayClinics(day).slice(0, 2)" :key="uiClinicKey(clinic)">
-                              <span
-                                class="rounded-full px-2 py-1 text-xs font-black ring-1"
-                                :class="uiClinicBadgeClass(clinic)"
-                                x-text="uiClinicCode(clinic)"
-                              ></span>
-                            </template>
-
-                            <template x-if="uiDayClinics(day).length > 2">
-                              <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-black text-slate-500">
-                                +<span x-text="uiDayClinics(day).length - 2"></span>
-                              </span>
-                            </template>
-                          </div>
-
-                          <div class="mt-auto pt-2">
-                            <template x-if="uiDayActual(day) > 0">
-                              <p class="truncate text-xs font-black text-emerald-700" x-text="uiMoney(uiDayActual(day))"></p>
-                            </template>
-                            <template x-if="uiDayActual(day) <= 0 && uiDayEstimate(day) > 0">
-                              <p class="truncate text-xs font-black text-sky-700" x-text="uiMoney(uiDayEstimate(day))"></p>
-                            </template>
-                          </div>
-                        </div>
-                      </template>
-                    </button>
-                  </template>
-                </div>
-              </section>
-
-              <aside class="soft-card p-5 xl:col-span-4">
-                <div class="mb-4 flex items-start justify-between gap-3">
-                  <div>
-                    <h3 class="text-lg font-black text-slate-950">選中日子</h3>
-                    <p class="mt-1 text-sm text-slate-500" x-text="uiSelectedDateLabel()"></p>
-                  </div>
-                  <span
-                    class="rounded-full px-3 py-1 text-xs font-black"
-                    :class="uiDayStatusClass(uiSelectedDayObj())"
-                    x-text="uiDayStatusLabel(uiSelectedDayObj())"
-                  ></span>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                  <div class="rounded-2xl bg-slate-50 p-4">
-                    <p class="text-xs font-black uppercase tracking-widest text-slate-400">預計</p>
-                    <p class="mt-1 text-xl font-black text-slate-950" x-text="uiMoney(uiDayEstimate(uiSelectedDayObj()))"></p>
-                  </div>
-                  <div class="rounded-2xl bg-emerald-50 p-4">
-                    <p class="text-xs font-black uppercase tracking-widest text-emerald-500">實際</p>
-                    <p class="mt-1 text-xl font-black text-emerald-700" x-text="uiMoney(uiDayActual(uiSelectedDayObj()))"></p>
-                  </div>
-                </div>
-
-                <div class="mt-5">
-                  <h4 class="mb-3 text-sm font-black text-slate-700">診所 / Session</h4>
-
-                  <template x-if="uiDayClinics(uiSelectedDayObj()).length === 0">
-                    <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-center text-sm font-semibold text-slate-400">
-                      呢日未見到固定更或加節。
-                    </div>
-                  </template>
-
-                  <div class="space-y-3">
-                    <template x-for="clinic in uiDayClinics(uiSelectedDayObj())" :key="uiClinicKey(clinic)">
-                      <div class="rounded-2xl border border-slate-200 bg-white p-4">
-                        <div class="flex items-start justify-between gap-3">
-                          <div>
-                            <p class="font-black text-slate-950" x-text="uiClinicName(clinic)"></p>
-                            <p class="mt-1 text-xs font-semibold text-slate-500" x-text="uiSessionMeta(clinic)"></p>
-                          </div>
-                          <span
-                            class="rounded-full px-2.5 py-1 text-xs font-black ring-1"
-                            :class="uiClinicBadgeClass(clinic)"
-                            x-text="uiClinicCode(clinic)"
-                          ></span>
-                        </div>
-                      </div>
-                    </template>
-                  </div>
-                </div>
-
-                <div class="mt-5 flex flex-col gap-2 sm:flex-row xl:flex-col">
-                  <button type="button" @click="uiSetView('records')" class="btn btn-primary flex-1">
-                    填每日記錄
-                  </button>
-                  <button type="button" @click="uiSetView('adjustments')" class="btn btn-secondary flex-1">
-                    加節 / 休假
-                  </button>
-                </div>
-              </aside>
-            </div>
-          </section>
-
-          <!-- RECORDS -->
-          <section x-show="uiIsView('records')" x-transition.opacity>
-            <div class="grid gap-5 xl:grid-cols-12">
-              <section class="soft-card p-5 xl:col-span-5">
-                <div class="mb-5">
-                  <h2 class="text-xl font-black text-slate-950">每日記錄</h2>
-                  <p class="mt-1 text-sm text-slate-500">填每日診金、小手術及備註，用嚟計實際分成。</p>
-                </div>
-
-                <form @submit.prevent="uiSaveDaily()" class="space-y-4">
-                  <label>
-                    <span class="label">日期</span>
-                    <input
-                      type="date"
-                      x-model="selectedDate"
-                      @change="uiSyncSelectedDate()"
-                      class="input"
-                    />
-                  </label>
-
-                  <label>
-                    <span class="label">診所</span>
-                    <select x-model="dailyForm.clinic_id" class="input" required>
-                      <option value="">選擇診所</option>
-                      <template x-for="clinic in clinics" :key="clinic.id || clinic.code || clinic.name">
-                        <option :value="clinic.id" x-text="uiClinicName(clinic)"></option>
-                      </template>
-                    </select>
-                  </label>
-
-                  <div class="grid grid-cols-2 gap-3">
-                    <label>
-                      <span class="label">診金總數</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        x-model.number="dailyForm.consultation_total"
-                        class="input"
-                        placeholder="0"
-                      />
-                    </label>
-
-                    <label>
-                      <span class="label">小手術總數</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        x-model.number="dailyForm.minor_total"
-                        class="input"
-                        placeholder="0"
-                      />
-                    </label>
-                  </div>
-
-                  <div class="grid grid-cols-2 gap-3">
-                    <label>
-                      <span class="label">實收 / 診所收入</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        x-model.number="dailyForm.gross_total"
-                        class="input"
-                        placeholder="可留空"
-                      />
-                    </label>
-
-                    <label>
-                      <span class="label">已返工？</span>
-                      <select x-model="dailyForm.worked" class="input">
-                        <option value="yes">有返工</option>
-                        <option value="no">冇返工</option>
-                      </select>
-                    </label>
-                  </div>
-
-                  <label>
-                    <span class="label">備註</span>
-                    <textarea
-                      x-model="dailyForm.note"
-                      rows="3"
-                      class="input resize-none"
-                      placeholder="例如：遲開診、特別 case、診所未出數..."
-                    ></textarea>
-                  </label>
-
-                  <div class="flex flex-col gap-2 sm:flex-row">
-                    <button type="submit" class="btn btn-primary flex-1">
-                      儲存記錄
-                    </button>
-                    <button type="button" @click="uiClearDailyForm()" class="btn btn-secondary flex-1">
-                      清空
-                    </button>
-                  </div>
-                </form>
-              </section>
-
-              <section class="soft-card p-5 xl:col-span-7">
-                <div class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <h2 class="text-xl font-black text-slate-950">本月已填</h2>
-                    <p class="mt-1 text-sm text-slate-500">按目前月份篩選。</p>
-                  </div>
-                  <button type="button" @click="uiRefreshData()" class="btn btn-secondary">
-                    重新整理
-                  </button>
-                </div>
-
-                <template x-if="uiFilteredLogs().length === 0">
-                  <div class="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
-                    <p class="text-3xl">📝</p>
-                    <p class="mt-3 font-black text-slate-700">未有記錄</p>
-                    <p class="mt-1 text-sm text-slate-500">填咗每日記錄之後會喺度出現。</p>
-                  </div>
-                </template>
-
-                <div class="space-y-3">
-                  <template x-for="log in uiFilteredLogs()" :key="log.id || (log.date + '-' + log.clinic_id)">
-                    <div class="rounded-2xl border border-slate-200 bg-white p-4">
-                      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <p class="font-black text-slate-950">
-                            <span x-text="uiFormatDate(log.date)"></span>
-                            <span class="text-slate-300"> · </span>
-                            <span x-text="uiClinicNameById(log.clinic_id)"></span>
-                          </p>
-                          <p class="mt-1 text-xs font-semibold text-slate-500" x-text="log.note || '無備註'"></p>
-                        </div>
-                        <div class="text-left sm:text-right">
-                          <p class="text-lg font-black text-emerald-700" x-text="uiMoney(uiLogAmount(log))"></p>
-                          <p class="text-xs font-bold text-slate-400">
-                            診金 <span x-text="uiMoney(log.consultation_total || 0)"></span>
-                            · 小手術 <span x-text="uiMoney(log.minor_total || 0)"></span>
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </template>
-                </div>
-              </section>
-            </div>
-          </section>
-
-          <!-- INVOICES -->
-          <section x-show="uiIsView('invoices')" x-transition.opacity>
-            <div class="grid gap-5 xl:grid-cols-12">
-              <section class="soft-card p-5 xl:col-span-4">
-                <div class="mb-5">
-                  <h2 class="text-xl font-black text-slate-950">Invoice</h2>
-                  <p class="mt-1 text-sm text-slate-500">按診所生成及列印本月 invoice。</p>
-                </div>
-
-                <div class="space-y-4">
-                  <label>
-                    <span class="label">月份</span>
-                    <div class="grid grid-cols-2 gap-3">
-                      <input type="number" x-model.number="year" class="input" />
-                      <select x-model.number="month" @change="uiAfterMonthChange(true)" class="input">
-                        <template x-for="m in 12" :key="m">
-                          <option :value="m" x-text="m + '月'"></option>
-                        </template>
-                      </select>
-                    </div>
-                  </label>
-
-                  <label>
-                    <span class="label">診所</span>
-                    <select x-model="invoiceClinicId" class="input">
-                      <option value="">全部 / 選擇診所</option>
-                      <template x-for="clinic in clinics" :key="clinic.id || clinic.code || clinic.name">
-                        <option :value="clinic.id" x-text="uiClinicName(clinic)"></option>
-                      </template>
-                    </select>
-                  </label>
-
-                  <div class="flex flex-col gap-2">
-                    <button type="button" @click="uiCreateInvoice()" class="btn btn-primary">
-                      生成 Invoice
-                    </button>
-                    <button type="button" @click="uiRefreshInvoices()" class="btn btn-secondary">
-                      重新整理 Invoice
-                    </button>
-                  </div>
-                </div>
-              </section>
-
-              <section class="soft-card p-5 xl:col-span-8">
-                <div class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <h2 class="text-xl font-black text-slate-950">Invoice 列表</h2>
-                    <p class="mt-1 text-sm text-slate-500">Snapshot 形式保存，避免之後改設定影響舊 invoice。</p>
-                  </div>
-                  <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-500">
-                    <span x-text="uiInvoiceList().length"></span> 張
-                  </span>
-                </div>
-
-                <template x-if="uiInvoiceList().length === 0">
-                  <div class="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
-                    <p class="text-3xl">📄</p>
-                    <p class="mt-3 font-black text-slate-700">未有 invoice</p>
-                    <p class="mt-1 text-sm text-slate-500">按左邊生成本月 invoice。</p>
-                  </div>
-                </template>
-
-                <div class="space-y-3">
-                  <template x-for="inv in uiInvoiceList()" :key="inv.id || (inv.clinic_id + '-' + inv.year + '-' + inv.month)">
-                    <article class="rounded-2xl border border-slate-200 bg-white p-4">
-                      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                        <div>
-                          <div class="flex flex-wrap items-center gap-2">
-                            <h3 class="font-black text-slate-950">
-                              <span x-text="uiClinicNameById(inv.clinic_id) || inv.clinic_name || '診所'"></span>
-                            </h3>
-                            <span
-                              class="rounded-full px-2.5 py-1 text-xs font-black"
-                              :class="uiInvoiceStatusClass(inv)"
-                              x-text="uiInvoiceStatusLabel(inv)"
-                            ></span>
-                          </div>
-                          <p class="mt-1 text-sm font-semibold text-slate-500">
-                            <span x-text="inv.year || year"></span>年
-                            <span x-text="inv.month || month"></span>月
-                            <span class="text-slate-300"> · </span>
-                            到期：
-                            <span x-text="inv.due_date ? uiFormatDate(inv.due_date) : '未設定'"></span>
-                          </p>
-                        </div>
-
-                        <div class="text-left md:text-right">
-                          <p class="text-2xl font-black text-slate-950" x-text="uiMoney(uiInvoiceAmount(inv))"></p>
-                          <div class="mt-2 flex flex-wrap gap-2 md:justify-end">
-                            <button type="button" @click="uiOpenInvoice(inv)" class="btn btn-secondary px-3 py-2 text-xs">
-                              開啟 / 列印
-                            </button>
-                            <button type="button" @click="uiMarkInvoice(inv, 'paid')" class="btn btn-primary px-3 py-2 text-xs">
-                              已收款
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </article>
-                  </template>
-                </div>
-              </section>
-            </div>
-          </section>
-
-          <!-- ADJUSTMENTS -->
-          <section x-show="uiIsView('adjustments')" x-transition.opacity>
-            <div class="grid gap-5 xl:grid-cols-3">
-              <section class="soft-card p-5">
-                <div class="mb-5">
-                  <h2 class="text-xl font-black text-slate-950">年假 / 休診</h2>
-                  <p class="mt-1 text-sm text-slate-500">加入一日或一段日期 leave。</p>
-                </div>
-
-                <form @submit.prevent="uiSaveLeave()" class="space-y-4">
-                  <label>
-                    <span class="label">診所</span>
-                    <select x-model="leaveForm.clinic_id" class="input">
-                      <option value="">全部診所</option>
-                      <template x-for="clinic in clinics" :key="clinic.id || clinic.code || clinic.name">
-                        <option :value="clinic.id" x-text="uiClinicName(clinic)"></option>
-                      </template>
-                    </select>
-                  </label>
-
-                  <div class="grid grid-cols-2 gap-3">
-                    <label>
-                      <span class="label">開始</span>
-                      <input type="date" x-model="leaveForm.start" class="input" required />
-                    </label>
-                    <label>
-                      <span class="label">結束</span>
-                      <input type="date" x-model="leaveForm.end" class="input" />
-                    </label>
-                  </div>
-
-                  <label>
-                    <span class="label">類型</span>
-                    <select x-model="leaveForm.type" class="input">
-                      <option value="annual">年假</option>
-                      <option value="sick">病假</option>
-                      <option value="clinic_closed">診所休診</option>
-                      <option value="other">其他</option>
-                    </select>
-                  </label>
-
-                  <label>
-                    <span class="label">備註</span>
-                    <input type="text" x-model="leaveForm.note" class="input" placeholder="可留空" />
-                  </label>
-
-                  <button type="submit" class="btn btn-primary w-full">
-                    加入休假
-                  </button>
-                </form>
-              </section>
-
-              <section class="soft-card p-5">
-                <div class="mb-5">
-                  <h2 class="text-xl font-black text-slate-950">加節 / 特更</h2>
-                  <p class="mt-1 text-sm text-slate-500">加入非固定更表嘅 session。</p>
-                </div>
-
-                <form @submit.prevent="uiSaveExtra()" class="space-y-4">
-                  <label>
-                    <span class="label">日期</span>
-                    <input type="date" x-model="extraForm.date" class="input" required />
-                  </label>
-
-                  <label>
-                    <span class="label">診所</span>
-                    <select x-model="extraForm.clinic_id" class="input" required>
-                      <option value="">選擇診所</option>
-                      <template x-for="clinic in clinics" :key="clinic.id || clinic.code || clinic.name">
-                        <option :value="clinic.id" x-text="uiClinicName(clinic)"></option>
-                      </template>
-                    </select>
-                  </label>
-
-                  <div class="grid grid-cols-2 gap-3">
-                    <label>
-                      <span class="label">開始</span>
-                      <input type="time" x-model="extraForm.start_time" class="input" />
-                    </label>
-                    <label>
-                      <span class="label">結束</span>
-                      <input type="time" x-model="extraForm.end_time" class="input" />
-                    </label>
-                  </div>
-
-                  <div class="grid grid-cols-2 gap-3">
-                    <label>
-                      <span class="label">固定金額</span>
-                      <input type="number" min="0" step="0.01" x-model.number="extraForm.fixed_fee" class="input" placeholder="0" />
-                    </label>
-                    <label>
-                      <span class="label">時薪</span>
-                      <input type="number" min="0" step="0.01" x-model.number="extraForm.hourly_rate" class="input" placeholder="0" />
-                    </label>
-                  </div>
-
-                  <label>
-                    <span class="label">備註</span>
-                    <input type="text" x-model="extraForm.note" class="input" placeholder="例如：星期日加節" />
-                  </label>
-
-                  <button type="submit" class="btn btn-primary w-full">
-                    加入加節
-                  </button>
-                </form>
-              </section>
-
-              <section class="soft-card p-5">
-                <div class="mb-5">
-                  <h2 class="text-xl font-black text-slate-950">單日 Override</h2>
-                  <p class="mt-1 text-sm text-slate-500">取消某日固定更，或標記特殊情況。</p>
-                </div>
-
-                <form @submit.prevent="uiSaveOverride()" class="space-y-4">
-                  <label>
-                    <span class="label">日期</span>
-                    <input type="date" x-model="overrideForm.date" class="input" required />
-                  </label>
-
-                  <label>
-                    <span class="label">診所</span>
-                    <select x-model="overrideForm.clinic_id" class="input">
-                      <option value="">全部診所</option>
-                      <template x-for="clinic in clinics" :key="clinic.id || clinic.code || clinic.name">
-                        <option :value="clinic.id" x-text="uiClinicName(clinic)"></option>
-                      </template>
-                    </select>
-                  </label>
-
-                  <label>
-                    <span class="label">動作</span>
-                    <select x-model="overrideForm.action" class="input">
-                      <option value="cancel">取消固定更</option>
-                      <option value="no_work">冇返工</option>
-                      <option value="work">有返工</option>
-                      <option value="note">只加備註</option>
-                    </select>
-                  </label>
-
-                  <label>
-                    <span class="label">備註</span>
-                    <textarea x-model="overrideForm.note" rows="3" class="input resize-none" placeholder="例如：診所臨時休息"></textarea>
-                  </label>
-
-                  <button type="submit" class="btn btn-primary w-full">
-                    儲存 Override
-                  </button>
-                </form>
-              </section>
-            </div>
-
-            <section class="soft-card mt-5 p-5">
-              <h2 class="text-xl font-black text-slate-950">本月調整</h2>
-              <p class="mt-1 text-sm text-slate-500">休假、加節、override 總覽。</p>
-
-              <div class="mt-5 grid gap-4 lg:grid-cols-3">
-                <div class="rounded-3xl bg-slate-50 p-4">
-                  <p class="text-sm font-black text-slate-700">休假</p>
-                  <p class="mt-2 text-2xl font-black text-slate-950" x-text="uiMonthItems(leaves).length"></p>
-                </div>
-                <div class="rounded-3xl bg-sky-50 p-4">
-                  <p class="text-sm font-black text-sky-700">加節</p>
-                  <p class="mt-2 text-2xl font-black text-sky-950" x-text="uiMonthItems(extras).length"></p>
-                </div>
-                <div class="rounded-3xl bg-amber-50 p-4">
-                  <p class="text-sm font-black text-amber-700">Override</p>
-                  <p class="mt-2 text-2xl font-black text-amber-950" x-text="uiMonthItems(overrides).length"></p>
-                </div>
-              </div>
-            </section>
-          </section>
-
-          <!-- SETTINGS -->
-          <section x-show="uiIsView('settings')" x-transition.opacity>
-            <div class="grid gap-5 xl:grid-cols-12">
-              <section class="soft-card p-5 xl:col-span-5">
-                <div class="mb-5">
-                  <h2 class="text-xl font-black text-slate-950">個人 / Invoice 設定</h2>
-                  <p class="mt-1 text-sm text-slate-500">會用喺 invoice header 及收款資料。</p>
-                </div>
-
-                <form @submit.prevent="uiSaveProfile()" class="space-y-4">
-                  <label>
-                    <span class="label">顯示名稱</span>
-                    <input type="text" x-model="profile.name" class="input" placeholder="Dr. XXX" />
-                  </label>
-
-                  <label>
-                    <span class="label">Invoice 名稱</span>
-                    <input type="text" x-model="profile.invoice_name" class="input" placeholder="Your invoice name" />
-                  </label>
-
-                  <label>
-                    <span class="label">地址 / 聯絡資料</span>
-                    <textarea x-model="profile.address" rows="3" class="input resize-none" placeholder="可留空"></textarea>
-                  </label>
-
-                  <div class="grid grid-cols-2 gap-3">
-                    <label>
-                      <span class="label">銀行名稱</span>
-                      <input type="text" x-model="profile.bank_name" class="input" />
-                    </label>
-
-                    <label>
-                      <span class="label">戶口號碼</span>
-                      <input type="text" x-model="profile.bank_account" class="input" />
-                    </label>
-                  </div>
-
-                  <button type="submit" class="btn btn-primary w-full">
-                    儲存設定
-                  </button>
-                </form>
-              </section>
-
-              <section class="soft-card p-5 xl:col-span-7">
-                <div class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <h2 class="text-xl font-black text-slate-950">診所</h2>
-                    <p class="mt-1 text-sm text-slate-500">管理診所名稱、代號及預設分成。</p>
-                  </div>
-                  <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-500">
-                    <span x-text="clinics.length"></span> 間
-                  </span>
-                </div>
-
-                <div class="mb-5 grid gap-3 sm:grid-cols-2">
-                  <template x-for="clinic in clinics" :key="clinic.id || clinic.code || clinic.name">
-                    <article class="rounded-2xl border border-slate-200 bg-white p-4">
-                      <div class="flex items-start justify-between gap-3">
-                        <div>
-                          <p class="font-black text-slate-950" x-text="uiClinicName(clinic)"></p>
-                          <p class="mt-1 text-xs font-semibold text-slate-500">
-                            Code:
-                            <span x-text="uiClinicCode(clinic)"></span>
-                          </p>
-                        </div>
-                        <span
-                          class="rounded-full px-2.5 py-1 text-xs font-black ring-1"
-                          :class="uiClinicBadgeClass(clinic)"
-                          x-text="uiClinicCode(clinic)"
-                        ></span>
-                      </div>
-                    </article>
-                  </template>
-                </div>
-
-                <form @submit.prevent="uiSaveClinic()" class="rounded-3xl bg-slate-50 p-4">
-                  <h3 class="mb-4 font-black text-slate-950">新增診所</h3>
-
-                  <div class="grid gap-3 sm:grid-cols-2">
-                    <label>
-                      <span class="label">診所名</span>
-                      <input type="text" x-model="clinicForm.name" class="input" required />
-                    </label>
-
-                    <label>
-                      <span class="label">短代號</span>
-                      <input type="text" x-model="clinicForm.code" class="input" placeholder="例如 MK / CWB" />
-                    </label>
-
-                    <label>
-                      <span class="label">預設固定金額</span>
-                      <input type="number" min="0" step="0.01" x-model.number="clinicForm.default_fee" class="input" />
-                    </label>
-
-                    <label>
-                      <span class="label">預設分成 %</span>
-                      <input type="number" min="0" max="100" step="0.01" x-model.number="clinicForm.share_percent" class="input" />
-                    </label>
-                  </div>
-
-                  <div class="mt-4">
-                    <button type="submit" class="btn btn-primary w-full">
-                      新增診所
-                    </button>
-                  </div>
-                </form>
-              </section>
-            </div>
-
-            <section class="soft-card mt-5 p-5">
-              <div class="mb-5">
-                <h2 class="text-xl font-black text-slate-950">固定更表</h2>
-                <p class="mt-1 text-sm text-slate-500">設定每星期固定返邊間診所。</p>
-              </div>
-
-              <form @submit.prevent="uiSaveRule()" class="rounded-3xl bg-slate-50 p-4">
-                <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-                  <label class="xl:col-span-2">
-                    <span class="label">診所</span>
-                    <select x-model="ruleForm.clinic_id" class="input" required>
-                      <option value="">選擇診所</option>
-                      <template x-for="clinic in clinics" :key="clinic.id || clinic.code || clinic.name">
-                        <option :value="clinic.id" x-text="uiClinicName(clinic)"></option>
-                      </template>
-                    </select>
-                  </label>
-
-                  <label>
-                    <span class="label">星期</span>
-                    <select x-model.number="ruleForm.weekday" class="input" required>
-                      <option value="1">一</option>
-                      <option value="2">二</option>
-                      <option value="3">三</option>
-                      <option value="4">四</option>
-                      <option value="5">五</option>
-                      <option value="6">六</option>
-                      <option value="0">日</option>
-                    </select>
-                  </label>
-
-                  <label>
-                    <span class="label">開始</span>
-                    <input type="time" x-model="ruleForm.start_time" class="input" />
-                  </label>
-
-                  <label>
-                    <span class="label">結束</span>
-                    <input type="time" x-model="ruleForm.end_time" class="input" />
-                  </label>
-
-                  <label>
-                    <span class="label">固定金額</span>
-                    <input type="number" min="0" step="0.01" x-model.number="ruleForm.fixed_fee" class="input" />
-                  </label>
-                </div>
-
-                <div class="mt-4">
-                  <button type="submit" class="btn btn-primary">
-                    加入固定更
-                  </button>
-                </div>
-              </form>
-
-              <div class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                <template x-for="rule in rules" :key="rule.id || (rule.clinic_id + '-' + rule.weekday + '-' + rule.start_time)">
-                  <article class="rounded-2xl border border-slate-200 bg-white p-4">
-                    <div class="flex items-start justify-between gap-3">
-                      <div>
-                        <p class="font-black text-slate-950" x-text="uiClinicNameById(rule.clinic_id)"></p>
-                        <p class="mt-1 text-sm font-semibold text-slate-500">
-                          星期<span x-text="uiWeekdayLabel(rule.weekday)"></span>
-                          ·
-                          <span x-text="rule.start_time || '--:--'"></span>
-                          -
-                          <span x-text="rule.end_time || '--:--'"></span>
-                        </p>
-                      </div>
-                      <p class="font-black text-sky-700" x-text="uiMoney(rule.fixed_fee || rule.fee || 0)"></p>
-                    </div>
-                  </article>
-                </template>
-              </div>
-            </section>
-          </section>
-        </main>
-      </div>
-
-      <!-- Mobile bottom nav -->
-      <nav class="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/90 px-2 py-2 backdrop-blur-xl lg:hidden no-print">
-        <div class="mx-auto grid max-w-md grid-cols-5 gap-1">
-          <template x-for="item in uiNavItems" :key="item.id">
-            <button
-              type="button"
-              @click="uiSetView(item.id)"
-              class="flex flex-col items-center justify-center rounded-2xl px-2 py-2 text-xs font-black transition"
-              :class="uiIsView(item.id)
-                ? 'bg-slate-950 text-white'
-                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-950'"
-            >
-              <span class="text-lg leading-none" x-text="item.icon"></span>
-              <span class="mt-1" x-text="item.short"></span>
-            </button>
+        <nav class="tabs" aria-label="功能">
+          <template x-for="t in tabs" :key="t[0]">
+            <button :class="{active:tab===t[0]}"
+              :aria-pressed="tab===t[0]" @click="tab=t[0]" x-text="t[1]"></button>
           </template>
+        </nav>
+
+        <div class="notice" x-show="!attOk">
+          attendance 資料表未能讀取，暫時無法確認返工。
+          請檢查原有資料表及權限；未確認收入不會自動當成已賺取。
         </div>
-      </nav>
-    </div>
-  </template>
 
-  <!-- Existing app scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-
-  <script src="./holidays.js"></script>
-  <script src="./config.js"></script>
-  <script src="./calc.js"></script>
-  <script src="./calc2.js"></script>
-  <script src="./invoice.js"></script>
-  <script src="./app.js"></script>
-
-  <!-- UI compatibility helpers -->
-  <script>
-    function uiApp() {
-      const now = new Date();
-      const todayIso = toISODate(now);
-      const base = typeof window.app === 'function' ? window.app() : {};
-
-      return {
-        user: null,
-        session: null,
-        currentUser: null,
-        authUser: null,
-        loggedIn: false,
-        isAuthed: false,
-        loading: false,
-        errorMsg: '',
-        notice: '',
-
-        email: '',
-        password: '',
-
-        year: now.getFullYear(),
-        month: now.getMonth() + 1,
-
-        profile: {},
-        clinics: [],
-        rules: [],
-        leaves: [],
-        overrides: [],
-        extras: [],
-        dailyLogs: [],
-        logs: [],
-        attendance: [],
-        invoices: [],
-
-        selectedDate: todayIso,
-        selectedDay: null,
-
-        invoiceClinicId: '',
-
-        dailyForm: {
-          date: todayIso,
-          clinic_id: '',
-          consultation_total: 0,
-          minor_total: 0,
-          gross_total: 0,
-          worked: 'yes',
-          note: ''
-        },
-
-        clinicForm: {
-          name: '',
-          code: '',
-          default_fee: 0,
-          share_percent: 0
-        },
-
-        ruleForm: {
-          clinic_id: '',
-          weekday: 1,
-          start_time: '',
-          end_time: '',
-          fixed_fee: 0
-        },
-
-        leaveForm: {
-          clinic_id: '',
-          start: todayIso,
-          end: todayIso,
-          type: 'annual',
-          note: ''
-        },
-
-        extraForm: {
-          date: todayIso,
-          clinic_id: '',
-          start_time: '',
-          end_time: '',
-          fixed_fee: 0,
-          hourly_rate: 0,
-          note: ''
-        },
-
-        overrideForm: {
-          date: todayIso,
-          clinic_id: '',
-          action: 'cancel',
-          note: ''
-        },
-
-        uiView: 'dashboard',
-
-        uiNavItems: [
-          { id: 'dashboard', label: '總覽', short: '總覽', icon: '🏠' },
-          { id: 'records', label: '記錄', short: '記錄', icon: '📝' },
-          { id: 'invoices', label: 'Invoice', short: 'Invoice', icon: '📄' },
-          { id: 'adjustments', label: '調整', short: '調整', icon: '🗓️' },
-          { id: 'settings', label: '設定', short: '設定', icon: '⚙️' }
-        ],
-
-        ...base,
-
-        async uiInit() {
-          this.uiEnsureDefaults();
-
-          if (typeof this.init === 'function') {
-            try {
-              await this.init();
-            } catch (err) {
-              console.error(err);
-              this.errorMsg = err && err.message ? err.message : '初始化失敗';
-            }
-          }
-
-          this.uiEnsureDefaults();
-          this.uiSyncSelectedDate();
-        },
-
-        uiEnsureDefaults() {
-          const now = new Date();
-
-          if (!this.year) this.year = now.getFullYear();
-          if (!this.month) this.month = now.getMonth() + 1;
-
-          this.profile = this.profile || {};
-          this.clinics = Array.isArray(this.clinics) ? this.clinics : [];
-          this.rules = Array.isArray(this.rules) ? this.rules : [];
-          this.leaves = Array.isArray(this.leaves) ? this.leaves : [];
-          this.overrides = Array.isArray(this.overrides) ? this.overrides : [];
-          this.extras = Array.isArray(this.extras) ? this.extras : [];
-          this.invoices = Array.isArray(this.invoices) ? this.invoices : [];
-
-          if (!Array.isArray(this.dailyLogs)) {
-            this.dailyLogs = Array.isArray(this.logs) ? this.logs : [];
-          }
-
-          if (!this.selectedDate) this.selectedDate = toISODate(now);
-
-          this.dailyForm = {
-            date: this.selectedDate,
-            clinic_id: '',
-            consultation_total: 0,
-            minor_total: 0,
-            gross_total: 0,
-            worked: 'yes',
-            note: '',
-            ...(this.dailyForm || {})
-          };
-
-          this.clinicForm = {
-            name: '',
-            code: '',
-            default_fee: 0,
-            share_percent: 0,
-            ...(this.clinicForm || {})
-          };
-
-          this.ruleForm = {
-            clinic_id: '',
-            weekday: 1,
-            start_time: '',
-            end_time: '',
-            fixed_fee: 0,
-            ...(this.ruleForm || {})
-          };
-
-          this.leaveForm = {
-            clinic_id: '',
-            start: this.selectedDate,
-            end: this.selectedDate,
-            type: 'annual',
-            note: '',
-            ...(this.leaveForm || {})
-          };
-
-          this.extraForm = {
-            date: this.selectedDate,
-            clinic_id: '',
-            start_time: '',
-            end_time: '',
-            fixed_fee: 0,
-            hourly_rate: 0,
-            note: '',
-            ...(this.extraForm || {})
-          };
-
-          this.overrideForm = {
-            date: this.selectedDate,
-            clinic_id: '',
-            action: 'cancel',
-            note: '',
-            ...(this.overrideForm || {})
-          };
-
-          if (!this.uiView) {
-            this.uiView = this.view || this.tab || 'dashboard';
-          }
-        },
-
-        uiHasUser() {
-          return !!(
-            this.user ||
-            this.currentUser ||
-            this.authUser ||
-            (this.session && this.session.user) ||
-            this.loggedIn ||
-            this.isAuthed
-          );
-        },
-
-        uiSetView(view) {
-          this.uiView = view;
-          this.view = view;
-          this.tab = view;
-        },
-
-        uiIsView(view) {
-          return (this.uiView || this.view || this.tab) === view;
-        },
-
-        async uiAuth() {
-          this.errorMsg = '';
-
-          const names = ['signIn', 'signin', 'login', 'logIn'];
-          for (const name of names) {
-            if (typeof this[name] === 'function') {
-              try {
-                return await this[name](this.email, this.password);
-              } catch (err) {
-                console.error(err);
-                this.errorMsg = err && err.message ? err.message : '登入失敗';
-                return;
-              }
-            }
-          }
-
-          this.errorMsg = '搵唔到登入 function。請確認 app.js 有 login/signIn。';
-        },
-
-        async uiRegister() {
-          this.errorMsg = '';
-
-          const names = ['signUp', 'signup', 'register', 'createAccount'];
-          for (const name of names) {
-            if (typeof this[name] === 'function') {
-              try {
-                return await this[name](this.email, this.password);
-              } catch (err) {
-                console.error(err);
-                this.errorMsg = err && err.message ? err.message : '註冊失敗';
-                return;
-              }
-            }
-          }
-
-          this.errorMsg = '搵唔到註冊 function。請確認 app.js 有 signUp/register。';
-        },
-
-        async uiSignOut() {
-          await this.uiCall(['signOut', 'logout', 'logOut']);
-        },
-
-        async uiCall(names, ...args) {
-          const list = Array.isArray(names) ? names : [names];
-
-          for (const name of list) {
-            if (typeof this[name] === 'function') {
-              try {
-                return await this[name](...args);
-              } catch (err) {
-                console.error(err);
-                this.errorMsg = err && err.message ? err.message : '操作失敗';
-                return undefined;
-              }
-            }
-          }
-
-          return undefined;
-        },
-
-        async uiCallAll(names, ...args) {
-          const list = Array.isArray(names) ? names : [names];
-
-          for (const name of list) {
-            if (typeof this[name] === 'function') {
-              try {
-                await this[name](...args);
-              } catch (err) {
-                console.warn('uiCallAll failed:', name, err);
-              }
-            }
-          }
-        },
-
-        async uiRefreshData() {
-          await this.uiCallAll([
-            'load',
-            'reload',
-            'refresh',
-            'loadData',
-            'fetchData',
-            'loadDailyLogs',
-            'loadInvoices'
-          ], this.year, this.month);
-
-          await this.uiAfterMonthChange(false);
-        },
-
-        async uiRefreshInvoices() {
-          await this.uiCallAll(['loadInvoices', 'fetchInvoices', 'refreshInvoices'], this.year, this.month);
-        },
-
-        async uiAfterMonthChange(shouldLoad) {
-          this.uiEnsureDefaults();
-
-          if (shouldLoad) {
-            await this.uiCallAll([
-              'loadMonth',
-              'loadDailyLogs',
-              'loadInvoices',
-              'refreshMonth'
-            ], this.year, this.month);
-          }
-
-          await this.uiCallAll([
-            'buildCal',
-            'buildCalendar',
-            'rebuildCalendar',
-            'recalculate',
-            'summarize'
-          ], this.year, this.month);
-        },
-
-        async uiMonthMove(delta) {
-          if (delta < 0 && typeof this.prevMonth === 'function') {
-            await this.prevMonth();
-            this.uiEnsureDefaults();
-            return;
-          }
-
-          if (delta > 0 && typeof this.nextMonth === 'function') {
-            await this.nextMonth();
-            this.uiEnsureDefaults();
-            return;
-          }
-
-          const d = new Date(Number(this.year), Number(this.month) - 1 + delta, 1);
-          this.year = d.getFullYear();
-          this.month = d.getMonth() + 1;
-
-          await this.uiAfterMonthChange(true);
-        },
-
-        async uiSetToday() {
-          const d = new Date();
-          this.year = d.getFullYear();
-          this.month = d.getMonth() + 1;
-          this.selectedDate = toISODate(d);
-          this.uiSyncSelectedDate();
-
-          await this.uiAfterMonthChange(true);
-        },
-
-        uiMonthLabel() {
-          return `${this.year}年${this.month}月`;
-        },
-
-        uiMoney(value) {
-          const n = this.uiNum(value);
-          return new Intl.NumberFormat('zh-HK', {
-            style: 'currency',
-            currency: 'HKD',
-            maximumFractionDigits: 0
-          }).format(n);
-        },
-
-        uiNum(value) {
-          if (value === null || value === undefined || value === '') return 0;
-          if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
-
-          const cleaned = String(value).replace(/[^\d.-]/g, '');
-          const n = Number(cleaned);
-
-          return Number.isFinite(n) ? n : 0;
-        },
-
-        uiFirstNumber(obj, keys) {
-          if (!obj) return 0;
-
-          for (const key of keys) {
-            if (obj[key] !== undefined && obj[key] !== null && obj[key] !== '') {
-              return this.uiNum(obj[key]);
-            }
-          }
-
-          return 0;
-        },
-
-        uiSummaryObj() {
-          if (typeof this.summary === 'function') {
-            try {
-              return this.summary() || {};
-            } catch (err) {
-              return {};
-            }
-          }
-
-          return this.summary || this.monthSummary || this.totals || this.calcSummary || {};
-        },
-
-        uiExpectedTotal() {
-          const s = this.uiSummaryObj();
-
-          const direct = this.uiFirstNumber(s, [
-            'expectedTotal',
-            'expected_total',
-            'totalExpected',
-            'total_expected',
-            'estimatedTotal',
-            'estimated_total',
-            'budgetTotal',
-            'budget_total',
-            'total'
-          ]);
-
-          if (direct > 0) return direct;
-
-          return this.uiCalendarGrid().reduce((sum, day) => {
-            return sum + this.uiDayEstimate(day);
-          }, 0);
-        },
-
-        uiActualTotal() {
-          const s = this.uiSummaryObj();
-
-          const direct = this.uiFirstNumber(s, [
-            'actualShare',
-            'actual_share',
-            'shareActual',
-            'share_actual',
-            'actualTotal',
-            'actual_total',
-            'totalActual',
-            'total_actual',
-            'actual'
-          ]);
-
-          if (direct > 0) return direct;
-
-          return this.uiCalendarGrid().reduce((sum, day) => {
-            return sum + this.uiDayActual(day);
-          }, 0);
-        },
-
-        uiEstimatedShare() {
-          const s = this.uiSummaryObj();
-
-          return this.uiFirstNumber(s, [
-            'estimatedShare',
-            'estimated_share',
-            'shareEstimate',
-            'share_estimate',
-            'estimateShare',
-            'estimate_share',
-            'estShare',
-            'est_share'
-          ]);
-        },
-
-        uiMissingCount() {
-          const s = this.uiSummaryObj();
-
-          const direct = this.uiFirstNumber(s, [
-            'missing',
-            'missingCount',
-            'missing_count',
-            'missingLogs',
-            'missing_logs'
-          ]);
-
-          if (direct > 0) return direct;
-
-          const today = toISODate(new Date());
-
-          return this.uiCalendarGrid().filter(day => {
-            if (!day || day.__blank) return false;
-            const iso = this.uiDayIso(day);
-            return iso <= today && this.uiDayClinics(day).length > 0 && this.uiDayActual(day) <= 0;
-          }).length;
-        },
-
-        uiOverdueCount() {
-          return this.uiInvoiceList().filter(inv => this.uiInvoiceStatus(inv) === 'overdue').length;
-        },
-
-        uiRawCalendarDays() {
-          let raw =
-            this.calDays ||
-            this.calendarDays ||
-            this.monthDays ||
-            this.days ||
-            this.cal ||
-            this.calendar ||
-            [];
-
-          if (raw && Array.isArray(raw.weeks)) raw = raw.weeks.flat();
-          if (raw && Array.isArray(raw.days)) raw = raw.days;
-          if (raw && Array.isArray(raw.items)) raw = raw.items;
-          if (Array.isArray(raw) && Array.isArray(raw[0])) raw = raw.flat();
-
-          return Array.isArray(raw) ? raw : [];
-        },
-
-        uiCalendarGrid() {
-          const y = Number(this.year);
-          const m = Number(this.month);
-          const raw = this.uiRawCalendarDays();
-
-          const byIso = new Map();
-
-          for (const item of raw) {
-            const iso = this.uiDayIso(item);
-            if (iso && this.uiIsoInMonth(iso, y, m)) {
-              byIso.set(iso, { ...item, date: iso });
-            }
-          }
-
-          const first = new Date(y, m - 1, 1);
-          const last = new Date(y, m, 0);
-          const leading = (first.getDay() + 6) % 7;
-
-          const grid = [];
-
-          for (let i = 0; i < leading; i++) {
-            grid.push({ __blank: true, __key: `blank-start-${i}` });
-          }
-
-          for (let d = 1; d <= last.getDate(); d++) {
-            const iso = makeISO(y, m, d);
-            const item = byIso.get(iso) || { date: iso };
-            grid.push({
-              ...item,
-              date: iso,
-              __key: iso
-            });
-          }
-
-          while (grid.length % 7 !== 0) {
-            grid.push({ __blank: true, __key: `blank-end-${grid.length}` });
-          }
-
-          return grid;
-        },
-
-        uiDayIso(day) {
-          if (!day) return '';
-
-          if (typeof day === 'string') {
-            return normalizeDateString(day);
-          }
-
-          if (day instanceof Date) {
-            return toISODate(day);
-          }
-
-          const candidates = [
-            day.date,
-            day.iso,
-            day.day_date,
-            day.work_date,
-            day.session_date,
-            day.log_date
-          ];
-
-          for (const value of candidates) {
-            const iso = normalizeDateString(value);
-            if (iso) return iso;
-          }
-
-          if (typeof day.day === 'number') {
-            return makeISO(Number(this.year), Number(this.month), day.day);
-          }
-
-          if (typeof day.d === 'number') {
-            return makeISO(Number(this.year), Number(this.month), day.d);
-          }
-
-          return '';
-        },
-
-        uiIsoInMonth(iso, year, month) {
-          if (!iso) return false;
-
-          const y = Number(iso.slice(0, 4));
-          const m = Number(iso.slice(5, 7));
-
-          return y === Number(year) && m === Number(month);
-        },
-
-        uiDayNumber(day) {
-          const iso = this.uiDayIso(day);
-          if (!iso) return '';
-          return Number(iso.slice(8, 10));
-        },
-
-        uiFormatDate(value) {
-          const iso = normalizeDateString(value);
-          if (!iso) return '';
-
-          const d = new Date(`${iso}T00:00:00`);
-          return new Intl.DateTimeFormat('zh-HK', {
-            month: 'short',
-            day: 'numeric',
-            weekday: 'short'
-          }).format(d);
-        },
-
-        uiSelectedDateLabel() {
-          return this.uiFormatDate(this.selectedDate || this.uiDayIso(this.uiSelectedDayObj()));
-        },
-
-        uiIsToday(day) {
-          return this.uiDayIso(day) === toISODate(new Date());
-        },
-
-        uiSelectDay(day) {
-          if (!day || day.__blank) return;
-
-          const iso = this.uiDayIso(day);
-
-          this.selectedDay = day;
-          this.selectedDate = iso;
-          this.dailyForm.date = iso;
-          this.extraForm.date = iso;
-          this.overrideForm.date = iso;
-          this.leaveForm.start = iso;
-          this.leaveForm.end = iso;
-
-          if (typeof this.selectDay === 'function') {
-            try {
-              this.selectDay(day);
-            } catch (err) {
-              console.warn(err);
-            }
-          }
-        },
-
-        uiSyncSelectedDate() {
-          const iso = normalizeDateString(this.selectedDate) || toISODate(new Date());
-          this.selectedDate = iso;
-
-          const found = this.uiCalendarGrid().find(day => this.uiDayIso(day) === iso);
-          if (found) this.selectedDay = found;
-
-          this.dailyForm.date = iso;
-          this.extraForm.date = iso;
-          this.overrideForm.date = iso;
-        },
-
-        uiSelectedDayObj() {
-          if (this.selectedDay && !this.selectedDay.__blank) {
-            return this.selectedDay;
-          }
-
-          const iso = normalizeDateString(this.selectedDate);
-          return this.uiCalendarGrid().find(day => this.uiDayIso(day) === iso) || { date: iso };
-        },
-
-        uiDayClinics(day) {
-          if (!day || day.__blank) return [];
-
-          const iso = this.uiDayIso(day);
-          let list =
-            day.clinics ||
-            day.clinicList ||
-            day.sessions ||
-            day.shifts ||
-            day.items ||
-            day.works ||
-            [];
-
-          if (!Array.isArray(list) && list) {
-            list = [list];
-          }
-
-          if ((!list || list.length === 0) && typeof this.recClinics === 'function') {
-            try {
-              const result = this.recClinics(iso);
-              if (Array.isArray(result)) list = result;
-            } catch (err) {
-              console.warn(err);
-            }
-          }
-
-          return (list || []).map(item => {
-            if (!item) return item;
-
-            if (typeof item === 'string' || typeof item === 'number') {
-              return this.uiClinicById(item) || { id: item, name: String(item), code: String(item) };
-            }
-
-            if (item.clinic) {
-              return { ...item.clinic, ...item };
-            }
-
-            if (item.clinic_id) {
-              const clinic = this.uiClinicById(item.clinic_id);
-              return clinic ? { ...clinic, ...item } : item;
-            }
-
-            return item;
-          });
-        },
-
-        uiClinicById(id) {
-          if (id === undefined || id === null || id === '') return null;
-
-          return this.clinics.find(clinic => {
-            return String(clinic.id) === String(id) ||
-              String(clinic.clinic_id) === String(id) ||
-              String(clinic.code) === String(id);
-          }) || null;
-        },
-
-        uiClinicNameById(id) {
-          const clinic = this.uiClinicById(id);
-          return clinic ? this.uiClinicName(clinic) : '';
-        },
-
-        uiClinicName(clinic) {
-          if (!clinic) return '診所';
-          if (typeof clinic === 'string') return clinic;
-
-          return clinic.name ||
-            clinic.clinic_name ||
-            clinic.title ||
-            clinic.code ||
-            clinic.short_code ||
-            '診所';
-        },
-
-        uiClinicCode(clinic) {
-          if (!clinic) return '--';
-          if (typeof clinic === 'string') return clinic.slice(0, 4).toUpperCase();
-
-          const raw =
-            clinic.code ||
-            clinic.short_code ||
-            clinic.abbr ||
-            clinic.clinic_code ||
-            clinic.name ||
-            clinic.clinic_name ||
-            '--';
-
-          return String(raw).trim().slice(0, 4).toUpperCase();
-        },
-
-        uiClinicKey(clinic) {
-          if (!clinic) return Math.random().toString(36);
-          if (typeof clinic === 'string' || typeof clinic === 'number') return String(clinic);
-
-          return String(
-            clinic.id ||
-            clinic.clinic_id ||
-            clinic.code ||
-            clinic.short_code ||
-            clinic.name ||
-            JSON.stringify(clinic)
-          );
-        },
-
-        uiClinicBadgeClass(clinic) {
-          const code = this.uiClinicCode(clinic);
-          const value = [...code].reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
-          const idx = value % 6;
-
-          const classes = [
-            'bg-sky-50 text-sky-700 ring-sky-100',
-            'bg-emerald-50 text-emerald-700 ring-emerald-100',
-            'bg-violet-50 text-violet-700 ring-violet-100',
-            'bg-amber-50 text-amber-700 ring-amber-100',
-            'bg-rose-50 text-rose-700 ring-rose-100',
-            'bg-cyan-50 text-cyan-700 ring-cyan-100'
-          ];
-
-          return classes[idx];
-        },
-
-        uiSessionMeta(item) {
-          if (!item || typeof item === 'string') return '';
-
-          const start = item.start_time || item.start || item.from || '';
-          const end = item.end_time || item.end || item.to || '';
-          const fee = item.fixed_fee || item.fee || item.default_fee || '';
-
-          const parts = [];
-
-          if (start || end) {
-            parts.push(`${start || '--:--'} - ${end || '--:--'}`);
-          }
-
-          if (fee) {
-            parts.push(this.uiMoney(fee));
-          }
-
-          if (item.note) {
-            parts.push(item.note);
-          }
-
-          return parts.join(' · ') || 'Session';
-        },
-
-        uiDayActual(day) {
-          if (!day || day.__blank) return 0;
-
-          return this.uiFirstNumber(day, [
-            'actualShare',
-            'actual_share',
-            'shareActual',
-            'share_actual',
-            'actual',
-            'actual_total',
-            'daily_actual',
-            'gross_total',
-            'income',
-            'total'
-          ]);
-        },
-
-        uiDayEstimate(day) {
-          if (!day || day.__blank) return 0;
-
-          return this.uiFirstNumber(day, [
-            'estimatedShare',
-            'estimated_share',
-            'estimateShare',
-            'estimate_share',
-            'estShare',
-            'est_share',
-            'estimated',
-            'expected',
-            'budget',
-            'fixed_fee',
-            'fee'
-          ]);
-        },
-
-        uiDayStatus(day) {
-          if (!day || day.__blank) return 'blank';
-
-          const iso = this.uiDayIso(day);
-          const clinics = this.uiDayClinics(day);
-          const actual = this.uiDayActual(day);
-          const estimate = this.uiDayEstimate(day);
-
-          if (
-            day.isHoliday ||
-            day.holiday ||
-            day.leave ||
-            day.cancelled ||
-            day.canceled ||
-            day.skip ||
-            day.off ||
-            day.no_work
-          ) {
-            return 'off';
-          }
-
-          if (actual > 0 || day.logged || day.done) return 'done';
-
-          if (clinics.length > 0 || estimate > 0) {
-            if (iso && iso <= toISODate(new Date())) return 'missing';
-            return 'planned';
-          }
-
-          return 'empty';
-        },
-
-        uiDayStatusLabel(day) {
-          const status = this.uiDayStatus(day);
-
-          const labels = {
-            blank: '',
-            empty: '空',
-            off: '休',
-            done: '已填',
-            missing: '待填',
-            planned: '預計'
-          };
-
-          return labels[status] || '';
-        },
-
-        uiDayStatusClass(day) {
-          const status = this.uiDayStatus(day);
-
-          const classes = {
-            blank: '',
-            empty: 'bg-slate-100 text-slate-400',
-            off: 'bg-slate-100 text-slate-500',
-            done: 'bg-emerald-100 text-emerald-700',
-            missing: 'bg-amber-100 text-amber-700',
-            planned: 'bg-sky-100 text-sky-700'
-          };
-
-          return classes[status] || 'bg-slate-100 text-slate-500';
-        },
-
-        uiDayClass(day) {
-          if (!day || day.__blank) {
-            return 'border-transparent bg-transparent cursor-default';
-          }
-
-          const selected = this.uiDayIso(day) === normalizeDateString(this.selectedDate);
-          const status = this.uiDayStatus(day);
-
-          let cls = 'border-slate-200 bg-white hover:border-sky-300 hover:bg-sky-50/50';
-
-          if (status === 'done') cls = 'border-emerald-200 bg-emerald-50/45 hover:bg-emerald-50';
-          if (status === 'missing') cls = 'border-amber-200 bg-amber-50/55 hover:bg-amber-50';
-          if (status === 'planned') cls = 'border-sky-200 bg-sky-50/50 hover:bg-sky-50';
-          if (status === 'off' || status === 'empty') cls = 'border-slate-200 bg-slate-50 hover:bg-slate-100';
-
-          if (selected) {
-            cls += ' ring-2 ring-slate-950 ring-offset-2';
-          }
-
-          return cls;
-        },
-
-        uiFilteredLogs() {
-          const logs = Array.isArray(this.dailyLogs) && this.dailyLogs.length
-            ? this.dailyLogs
-            : Array.isArray(this.logs)
-              ? this.logs
-              : [];
-
-          return logs
-            .filter(log => this.uiIsoInMonth(normalizeDateString(log.date), this.year, this.month))
-            .sort((a, b) => String(b.date).localeCompare(String(a.date)));
-        },
-
-        uiLogAmount(log) {
-          return this.uiFirstNumber(log, [
-            'actualShare',
-            'actual_share',
-            'share',
-            'share_total',
-            'amount',
-            'gross_total',
-            'total'
-          ]);
-        },
-
-        async uiSaveDaily() {
-          this.dailyForm.date = normalizeDateString(this.selectedDate);
-          this.logForm = this.dailyForm;
-
-          await this.uiCall([
-            'saveDailyLog',
-            'saveDaily',
-            'saveLog',
-            'upsertDailyLog',
-            'upsertLog'
-          ], this.dailyForm);
-
-          await this.uiAfterMonthChange(true);
-        },
-
-        uiClearDailyForm() {
-          this.dailyForm = {
-            date: this.selectedDate,
-            clinic_id: '',
-            consultation_total: 0,
-            minor_total: 0,
-            gross_total: 0,
-            worked: 'yes',
-            note: ''
-          };
-        },
-
-        uiInvoiceList() {
-          const list = Array.isArray(this.invoices) ? this.invoices : [];
-
-          return [...list]
-            .filter(inv => {
-              const sameMonth =
-                (!inv.year || Number(inv.year) === Number(this.year)) &&
-                (!inv.month || Number(inv.month) === Number(this.month));
-
-              const sameClinic =
-                !this.invoiceClinicId ||
-                String(inv.clinic_id) === String(this.invoiceClinicId);
-
-              return sameMonth && sameClinic;
-            })
-            .sort((a, b) => {
-              const ak = `${a.year || 0}-${String(a.month || 0).padStart(2, '0')}-${a.created_at || ''}`;
-              const bk = `${b.year || 0}-${String(b.month || 0).padStart(2, '0')}-${b.created_at || ''}`;
-              return bk.localeCompare(ak);
-            });
-        },
-
-        uiInvoiceAmount(inv) {
-          return this.uiFirstNumber(inv, [
-            'total',
-            'total_amount',
-            'amount',
-            'invoice_total',
-            'share_total',
-            'subtotal',
-            'grand_total'
-          ]);
-        },
-
-        uiInvoiceStatus(inv) {
-          if (!inv) return 'draft';
-
-          const raw = String(inv.status || '').toLowerCase();
-
-          if (raw.includes('paid') || inv.paid_at) return 'paid';
-          if (raw.includes('sent')) return 'sent';
-          if (raw.includes('void') || raw.includes('cancel')) return 'void';
-
-          const due = normalizeDateString(inv.due_date);
-          if (due && due < toISODate(new Date())) return 'overdue';
-
-          return raw || 'draft';
-        },
-
-        uiInvoiceStatusLabel(inv) {
-          const status = this.uiInvoiceStatus(inv);
-
-          const labels = {
-            paid: '已收款',
-            sent: '已發出',
-            overdue: '逾期',
-            void: '已取消',
-            draft: '草稿'
-          };
-
-          return labels[status] || status;
-        },
-
-        uiInvoiceStatusClass(inv) {
-          const status = this.uiInvoiceStatus(inv);
-
-          const classes = {
-            paid: 'bg-emerald-100 text-emerald-700',
-            sent: 'bg-sky-100 text-sky-700',
-            overdue: 'bg-rose-100 text-rose-700',
-            void: 'bg-slate-100 text-slate-500',
-            draft: 'bg-amber-100 text-amber-700'
-          };
-
-          return classes[status] || 'bg-slate-100 text-slate-600';
-        },
-
-        async uiCreateInvoice() {
-          this.invoiceForm = {
-            clinic_id: this.invoiceClinicId,
-            year: this.year,
-            month: this.month
-          };
-
-          await this.uiCall([
-            'createInvoice',
-            'buildInvoice',
-            'saveInvoice',
-            'generateInvoice'
-          ], this.invoiceForm);
-
-          await this.uiRefreshInvoices();
-        },
-
-        async uiOpenInvoice(inv) {
-          if (window.InvoiceDoc && typeof window.InvoiceDoc.open === 'function') {
-            try {
-              return window.InvoiceDoc.open(inv, this);
-            } catch (err) {
-              console.warn(err);
-            }
-          }
-
-          await this.uiCall([
-            'openInvoice',
-            'printInvoice',
-            'viewInvoice'
-          ], inv);
-        },
-
-        async uiMarkInvoice(inv, status) {
-          await this.uiCall([
-            'markInvoice',
-            'updateInvoiceStatus',
-            'setInvoiceStatus'
-          ], inv, status);
-
-          await this.uiRefreshInvoices();
-        },
-
-        uiMonthItems(items) {
-          if (!Array.isArray(items)) return [];
-
-          return items.filter(item => {
-            const iso = normalizeDateString(item.date || item.start || item.start_date || item.day);
-            return this.uiIsoInMonth(iso, this.year, this.month);
-          });
-        },
-
-        async uiSaveLeave() {
-          this.leaveForm.start_date = this.leaveForm.start;
-          this.leaveForm.end_date = this.leaveForm.end || this.leaveForm.start;
-          this.leaveForm.date = this.leaveForm.start;
-
-          await this.uiCall([
-            'addLeave',
-            'saveLeave',
-            'createLeave',
-            'addHoliday',
-            'saveHoliday'
-          ], this.leaveForm);
-
-          await this.uiAfterMonthChange(true);
-        },
-
-        async uiSaveExtra() {
-          await this.uiCall([
-            'addExtra',
-            'saveExtra',
-            'createExtra',
-            'addSpecialSession',
-            'saveSpecialSession'
-          ], this.extraForm);
-
-          await this.uiAfterMonthChange(true);
-        },
-
-        async uiSaveOverride() {
-          await this.uiCall([
-            'addOverride',
-            'saveOverride',
-            'createOverride',
-            'saveDayOverride'
-          ], this.overrideForm);
-
-          await this.uiAfterMonthChange(true);
-        },
-
-        async uiSaveProfile() {
-          await this.uiCall([
-            'saveProfile',
-            'updateProfile',
-            'upsertProfile'
-          ], this.profile);
-        },
-
-        async uiSaveClinic() {
-          await this.uiCall([
-            'addClinic',
-            'saveClinic',
-            'createClinic'
-          ], this.clinicForm);
-
-          this.clinicForm = {
-            name: '',
-            code: '',
-            default_fee: 0,
-            share_percent: 0
-          };
-
-          await this.uiRefreshData();
-        },
-
-        async uiSaveRule() {
-          await this.uiCall([
-            'addRule',
-            'saveRule',
-            'createRule',
-            'addRosterRule',
-            'saveRosterRule'
-          ], this.ruleForm);
-
-          this.ruleForm = {
-            clinic_id: '',
-            weekday: 1,
-            start_time: '',
-            end_time: '',
-            fixed_fee: 0
-          };
-
-          await this.uiAfterMonthChange(true);
-        },
-
-        uiWeekdayLabel(value) {
-          const map = {
-            0: '日',
-            1: '一',
-            2: '二',
-            3: '三',
-            4: '四',
-            5: '五',
-            6: '六'
-          };
-
-          return map[Number(value)] || value;
+        <!-- 收入及月曆 -->
+        <section x-show="tab==='home'">
+          <div class="grid">
+            <article class="card">
+              <strong>Estimated Income</strong>
+              <div>本月預計收入</div>
+              <div class="amount" x-text="money(monthBudget())"></div>
+              <small>全月排班時薪／固定金額＋估算分成；不以實際分成覆蓋。</small>
+            </article>
+            <article class="card dark">
+              <strong>Real Gross Income</strong>
+              <div>本月實際總收入 · 已確認部分</div>
+              <div class="amount" x-text="money(gross())"></div>
+              <small>只計已確認返工及已知金額，未扣開支，包括未收款。</small>
+            </article>
+          </div>
+          <div class="notice">
+            先在日期明細按「確認返工」，時薪／固定金額先會計入實際收入。
+            分成留空代表待填，不會以估算代替。診金記錄請同時填兩項；確定冇收入先填 0。
+            <br>
+            <strong x-text="`已確認返工但分成待填：${pendingCount()} 筆`"></strong>
+          </div>
+
+          <div class="panel">
+            <h2>本月更表</h2>
+            <div class="calendar">
+              <template x-for="w in ['日','一','二','三','四','五','六']">
+                <div class="week" x-text="w"></div>
+              </template>
+              <template x-for="cell in cells" :key="cell.date">
+                <button class="day"
+                  :class="{
+                    selected:calSel===cell.date,
+                    outside:!cell.inMonth,
+                    done:cell.mark==='yes',
+                    pending:cell.entries.some(e=>confirmed(e)&&needsLog(e))
+                  }"
+                  :aria-label="cell.date"
+                  @click="run(()=>selectDay(cell.date))">
+                  <span x-text="cell.day+(cell.isToday?' · 今日':'')"></span>
+                  <span x-text="cell.entries.map(e=>e.code).join(' / ')"></span>
+                  <span x-text="cell.holiday"></span>
+                  <span class="value"
+                    x-text="cell.entries.some(e=>confirmed(e))
+                      ? money(cell.entries.reduce((n,e)=>n+entryEarned(e),0))
+                      : cell.entries.length ? '預 '+money(cell.budget) : ''"></span>
+                </button>
+              </template>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h2 x-text="calSel+' · 日期明細'"></h2>
+            <template x-if="selCell()">
+              <div>
+                <p class="muted" x-show="!selCell().entries.length">沒有可用排班。</p>
+                <template x-for="e in selCell().entries" :key="e.clinic_id">
+                  <div class="panel">
+                    <div class="bar">
+                      <strong x-text="e.name"></strong>
+                      <span class="badge"
+                        x-text="e.off?'已取消':confirmed(e)?'已確認返工':'未確認返工'"></span>
+                    </div>
+                    <p x-text="`${e.hours} 小時 · 時薪／固定金額 ${money(e.base)}`"></p>
+                    <p x-text="'已確認收入：'+money(entryEarned(e))+(confirmed(e)&&needsLog(e)?'（分成待填）':'')"></p>
+                    <div class="actions">
+                      <button class="primary"
+                        :disabled="!attOk || e.off || e.date>todayDate()"
+                        @click="run(()=>toggleWork(e))"
+                        x-text="e.worked?'撤回返工確認':'確認返工'"></button>
+                      <button @click="editLog(e.date,e.clinic_id)">填診金／小手術</button>
+                      <button x-show="!e.off" @click="run(()=>markOff(e))">取消固定更</button>
+                      <button x-show="e.offIds.length" @click="run(()=>undoOff(e))">復原取消</button>
+                    </div>
+                  </div>
+                </template>
+                <template x-for="(s,i) in selCell().other" :key="i">
+                  <p class="muted" x-text="cl(s.clinic_id)+' · '+blk(s.block)+' · '+s.reason"></p>
+                </template>
+              </div>
+            </template>
+          </div>
+        </section>
+
+        <!-- 每日記錄 -->
+        <section x-show="tab==='rec'">
+          <form class="panel stack" @submit.prevent="run(()=>saveDaily())">
+            <h2>每日診金記錄</h2>
+            <p class="muted">
+              填診所診金／小手術總額，系統按診所百分比計你嘅分成。
+              儲存記錄不等於確認返工。
+            </p>
+            <div class="formgrid">
+              <label>日期
+                <input type="date" x-model="logForm.date"
+                  @change="fillLog()" :max="todayDate()" required>
+              </label>
+              <label>診所
+                <select x-model="logForm.clinic_id" @change="fillLog()" required>
+                  <option value="">請選擇</option>
+                  <template x-for="c in clinics" :key="c.id">
+                    <option :value="c.id" x-text="c.name"></option>
+                  </template>
+                </select>
+              </label>
+              <label>診金總額 HK$
+                <input type="number" min="0" step=".01"
+                  x-model="logForm.consult" placeholder="待填；確定冇收入先填 0" required>
+              </label>
+              <label>小手術總額 HK$
+                <input type="number" min="0" step=".01"
+                  x-model="logForm.proc" placeholder="待填；確定冇收入先填 0" required>
+              </label>
+            </div>
+            <button class="primary" type="submit">儲存兩項記錄</button>
+          </form>
+          <div class="panel scroll">
+            <h2>本月記錄</h2>
+            <table>
+              <thead><tr><th>日期</th><th>診所</th><th>診金</th><th>小手術</th><th></th></tr></thead>
+              <tbody>
+                <template x-for="l in monthLogs()" :key="l.id">
+                  <tr>
+                    <td x-text="l.date"></td><td x-text="cl(l.clinic_id)"></td>
+                    <td x-text="money(l.consult_total)"></td>
+                    <td x-text="money(l.procedure_total)"></td>
+                    <td><button @click="editLog(l.date,l.clinic_id)">修改</button></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 診所 -->
+        <section x-show="tab==='clinics'">
+          <form class="panel stack" @submit.prevent="run(()=>addClinic())">
+            <h2>新增診所</h2>
+            <div class="formgrid">
+              <label>代號<input x-model="newClinic.code" required></label>
+              <label>名稱<input x-model="newClinic.name" required></label>
+              <label>時薪<input type="number" min="0" step=".01" x-model="newClinic.hourly_rate" required></label>
+            </div>
+            <button class="primary">新增診所</button>
+          </form>
+          <template x-for="c in clinics" :key="c.id">
+            <form class="panel stack" @submit.prevent="run(()=>saveClinic(c))">
+              <h2 x-text="c.code+' · '+c.name"></h2>
+              <div class="formgrid">
+                <label>代號<input x-model="c.code" required></label>
+                <label>名稱<input x-model="c.name" required></label>
+                <label>時薪<input type="number" min="0" step=".01" x-model="c.hourly_rate" required></label>
+                <label>診金分成 %<input type="number" min="0" max="100" step=".01" x-model="c.consult_pct" required></label>
+                <label>小手術分成 %（冇分成填 0）<input type="number" min="0" max="100" step=".01" x-model="c.procedure_pct" required></label>
+                <label>每日估算診金<input type="number" min="0" step=".01" x-model="c.est_consult_per_day"></label>
+                <label>每日估算小手術<input type="number" min="0" step=".01" x-model="c.est_procedure_per_day"></label>
+                <label>付款期限（日）<input type="number" min="1" step="1" x-model="c.payment_terms_days" required></label>
+                <label>Invoice 抬頭<input x-model="c.bill_name"></label>
+                <label>帳單地址<input x-model="c.bill_address"></label>
+                <label>聯絡人<input x-model="c.contact_name"></label>
+                <label>聯絡 Email<input type="email" x-model="c.contact_email"></label>
+                <label>WhatsApp<input x-model="c.contact_whatsapp"></label>
+              </div>
+              <label><input type="checkbox" x-model="c.active"> 啟用固定更</label>
+              <button class="primary">儲存診所設定</button>
+            </form>
+          </template>
+        </section>
+
+        <!-- 固定更 -->
+        <section x-show="tab==='rules'">
+          <form class="panel stack" @submit.prevent="run(()=>saveRule())">
+            <h2>新增固定更</h2>
+            <div class="formgrid">
+              <label>診所
+                <select x-model="ruleForm.clinic_id" required>
+                  <option value="">請選擇</option>
+                  <template x-for="c in clinics" :key="c.id"><option :value="c.id" x-text="c.name"></option></template>
+                </select>
+              </label>
+              <label>星期
+                <select x-model.number="ruleForm.weekday">
+                  <template x-for="(w,i) in ['日','一','二','三','四','五','六']">
+                    <option :value="i" x-text="'星期'+w"></option>
+                  </template>
+                </select>
+              </label>
+              <label>時段<select x-model="ruleForm.block"><option value="am">上午</option><option value="pm">下午</option></select></label>
+              <label>開始<input type="time" x-model="ruleForm.start_time" required></label>
+              <label>結束<input type="time" x-model="ruleForm.end_time" required></label>
+            </div>
+            <p class="muted">此表單沿用原有固定更欄位；新增後按星期重複。</p>
+            <button class="primary">新增固定更</button>
+          </form>
+          <div class="panel scroll">
+            <table>
+              <thead><tr><th>診所</th><th>星期／時段</th><th>時間</th><th>生效範圍</th><th></th></tr></thead>
+              <tbody>
+                <template x-for="r in rules" :key="r.id">
+                  <tr>
+                    <td x-text="cl(r.clinic_id)"></td>
+                    <td x-text="'星期'+wk(r.weekday)+' '+blk(r.block)"></td>
+                    <td x-text="hm(r.start_time)+'–'+hm(r.end_time)"></td>
+                    <td x-text="(r.valid_from||'不限')+' → '+(r.valid_to||'不限')"></td>
+                    <td><button class="danger" @click="run(()=>del('schedule_rules',r.id))">刪除</button></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 休假、加節、調整 -->
+        <section x-show="tab==='adjust'">
+          <form class="panel stack" @submit.prevent="run(()=>addLeave())">
+            <h2>休假</h2>
+            <div class="formgrid">
+              <label>開始日期<input type="date" x-model="leaveForm.start_date" required></label>
+              <label>結束日期<input type="date" x-model="leaveForm.end_date"></label>
+              <label>時段<select x-model="leaveForm.period"><option value="full">全日</option><option value="am">上午</option><option value="pm">下午</option></select></label>
+              <label>原因<input x-model="leaveForm.reason"></label>
+            </div>
+            <button class="primary">新增休假</button>
+            <template x-for="l in leaves" :key="l.id">
+              <div class="bar">
+                <span x-text="`${l.start_date} → ${l.end_date} · ${l.period==='full'?'全日':blk(l.period)} · ${l.reason||''}`"></span>
+                <button type="button" class="danger" @click="run(()=>del('leaves',l.id))">刪除</button>
+              </div>
+            </template>
+          </form>
+
+          <form class="panel stack" @submit.prevent="run(()=>saveExtraChecked())">
+            <h2>加節／固定金額特更</h2>
+            <div class="formgrid">
+              <label>診所<select x-model="extraForm.clinic_id" required>
+                <option value="">請選擇</option>
+                <template x-for="c in clinics" :key="c.id"><option :value="c.id" x-text="c.name"></option></template>
+              </select></label>
+              <label>日期<input type="date" x-model="extraForm.date" required></label>
+              <label>時數<input type="number" min="0" step=".25" x-model="extraForm.hours"></label>
+              <label>固定金額（普通加節留空）<input type="number" min="0" step=".01" x-model="extraForm.fixed_amount"></label>
+              <label>備註<input x-model="extraForm.note"></label>
+            </div>
+            <button class="primary">新增加節</button>
+            <template x-for="e in extras.filter(e=>e.date.startsWith(monthPrefix()))" :key="e.id">
+              <div class="bar">
+                <span x-text="`${e.date} · ${cl(e.clinic_id)} · ${e.fixed_amount==null?e.hours+' 小時':money(e.fixed_amount)}`"></span>
+                <button type="button" class="danger" @click="run(()=>del('extra_sessions',e.id))">刪除</button>
+              </div>
+            </template>
+          </form>
+
+          <form class="panel stack" @submit.prevent="run(()=>addOverride())">
+            <h2>固定更調整</h2>
+            <p class="muted">「返工」可恢復假日固定更；不會憑空新增排班。另加工作請用上方「加節」。</p>
+            <div class="formgrid">
+              <label>日期<input type="date" x-model="ovForm.date" required></label>
+              <label>診所<select x-model="ovForm.clinic_id">
+                <option value="">全部診所</option>
+                <template x-for="c in clinics" :key="c.id"><option :value="c.id" x-text="c.name"></option></template>
+              </select></label>
+              <label>時段<select x-model="ovForm.block"><option value="all">全日</option><option value="am">上午</option><option value="pm">下午</option></select></label>
+              <label>操作<select x-model="ovForm.action"><option value="work">返工</option><option value="cancel">取消</option></select></label>
+              <label>每節替代時數（可留空）<input type="number" min="0" step=".25" x-model="ovForm.hours"></label>
+              <label>備註<input x-model="ovForm.note"></label>
+            </div>
+            <button class="primary">儲存調整</button>
+            <template x-for="o in overrides.filter(o=>o.date.startsWith(monthPrefix()))" :key="o.id">
+              <div class="bar">
+                <span x-text="`${o.date} · ${o.clinic_id?cl(o.clinic_id):'全部診所'} · ${blk(o.block)} · ${o.action==='cancel'?'取消':'返工'}`"></span>
+                <button type="button" class="danger" @click="run(()=>del('overrides',o.id))">刪除調整</button>
+              </div>
+            </template>
+          </form>
+        </section>
+
+        <!-- Invoice -->
+        <section x-show="tab==='inv'">
+          <div class="panel stack">
+            <h2>按診所產生本月 Invoice</h2>
+            <label>發出日期<input type="date" x-model="issueDate" required></label>
+            <p class="muted">此版保留原有「每診所每月一張」格式。全部工作須已確認、所需分成已填，才可開單；不用估算金額開單。</p>
+            <template x-for="item in invRows()" :key="item.r.clinic.id">
+              <div class="bar">
+                <span x-text="item.r.clinic.name"></span>
+                <button class="primary" :disabled="!!item.inv"
+                  @click="run(()=>invoiceChecked(item.r))"
+                  x-text="item.inv?'本月已開單':'檢查並產生 Invoice'"></button>
+              </div>
+            </template>
+          </div>
+          <div class="panel">
+            <h2>本月 Invoice</h2>
+            <template x-for="i in invoices.filter(i=>i.year===y&&i.month===m)" :key="i.id">
+              <div class="panel stack">
+                <div class="bar">
+                  <strong x-text="i.invoice_no"></strong>
+                  <strong x-text="money(i.total)"></strong>
+                </div>
+                <p x-text="`${cl(i.clinic_id)} · 到期 ${i.due_date} · ${isOverdue(i)?'已逾期 '+overdueDays(i)+' 日':statusLabel(i)}`"></p>
+                <div class="actions">
+                  <button @click="printInv(i)">列印／另存 PDF</button>
+                  <button x-show="i.status==='draft'" @click="run(()=>setStatus(i,'sent'))">標記已發送</button>
+                  <button class="primary" x-show="i.status!=='paid'" @click="run(()=>setStatus(i,'paid'))">標記已收款</button>
+                  <button x-show="i.status==='paid'" @click="run(()=>reopenInvoice(i))">改回未收款</button>
+                  <button @click="run(()=>copyText(remindText(i)))">複製付款提醒</button>
+                  <button class="danger" x-show="i.status==='draft'"
+                    @click="run(()=>del('invoices',i.id))">刪除草稿</button>
+                </div>
+              </div>
+            </template>
+          </div>
+          <div class="panel">
+            <h2>所有月份逾期未收</h2>
+            <template x-for="i in overdueList()" :key="i.id">
+              <div class="bar">
+                <span x-text="i.invoice_no+' · '+money(i.total)+' · 逾期 '+overdueDays(i)+' 日'"></span>
+                <button @click="printInv(i)">查看／列印</button>
+              </div>
+            </template>
+          </div>
+        </section>
+
+        <!-- 個人資料 -->
+        <section x-show="tab==='settings'">
+          <form class="panel stack" @submit.prevent="run(()=>saveProfile())">
+            <h2>個人及收款資料</h2>
+            <div class="formgrid">
+              <template x-for="f in profileFields" :key="f[0]">
+                <label><span x-text="f[1]"></span><input x-model="profile[f[0]]"></label>
+              </template>
+            </div>
+            <label>地址<textarea x-model="profile.address"></textarea></label>
+            <label>Invoice 頁尾備註<textarea x-model="profile.footer_note"></textarea></label>
+            <label>簽名圖片<input type="file" accept="image/*" @change="pickSignature($event)"></label>
+            <template x-if="profile.signature">
+              <img :src="profile.signature" alt="簽名預覽" style="max-width:220px;max-height:90px">
+            </template>
+            <button class="primary">儲存設定</button>
+          </form>
+        </section>
+      </div>
+    </template>
+  </fieldset>
+</main>
+
+<script>
+window.addEventListener('error', function(event){
+  const box=document.getElementById('boot');
+  if(box){
+    box.style.display='block';
+    box.textContent='啟動／程式錯誤：'+
+      (event.message || '有檔案未能載入，請確認 HTML 與原有 JS 位於同一目錄。');
+  }
+},true);
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./config.js"></script>
+<script src="./holidays.js"></script>
+<script src="./calc.js"></script>
+<script src="./calc2.js"></script>
+<script src="./invoice.js"></script>
+<script src="./app.js"></script>
+
+<script>
+function incomeApp(){
+  const original=app();
+  return {
+    ...original,
+    busy:false,
+    tabs:[
+      ['home','收入／月曆'],
+      ['rec','每日診金'],
+      ['clinics','診所'],
+      ['rules','固定更'],
+      ['adjust','休假／加節'],
+      ['inv','Invoice'],
+      ['settings','個人設定']
+    ],
+    profileFields:[
+      ['full_name','姓名／開單人名稱'],
+      ['reg_no','註冊編號'],
+      ['phone','電話'],
+      ['email','Email'],
+      ['bank_name','銀行'],
+      ['account_name','戶口持有人'],
+      ['account_no','銀行戶口號碼'],
+      ['fps_id','FPS']
+    ],
+    logForm:{
+      date:Calc2.today(),clinic_id:'',consult:'',proc:''
+    },
+
+    async init(){
+      document.getElementById('boot').style.display='none';
+      try{
+        await original.init.call(this);
+      }catch(e){
+        this.fail(e);
+      }finally{
+        this.loading=false;
+      }
+    },
+
+    async run(fn){
+      if(this.busy)return;
+      this.busy=true;
+      this.err='';
+      try{
+        return await fn();
+      }catch(e){
+        return this.fail(e);
+      }finally{
+        this.busy=false;
+      }
+    },
+
+    money(value){
+      return 'HK$ '+Number(value||0).toLocaleString('en-HK',{
+        minimumFractionDigits:2,maximumFractionDigits:2
+      });
+    },
+
+    todayDate(){return Calc2.today()},
+    monthPrefix(){return `${this.y}-${String(this.m).padStart(2,'0')}-`},
+    monthEntries(){
+      return this.cells.filter(c=>c.inMonth).flatMap(c=>c.entries);
+    },
+    monthBudget(){
+      return this.cells.filter(c=>c.inMonth).reduce((n,c)=>n+c.budget,0);
+    },
+    confirmed(e){
+      return !e.off && e.worked && e.date<=this.todayDate();
+    },
+    needsLog(e){
+      const c=this.clinicOf(e.clinic_id);
+      return e.regular && (
+        c.procedure_pct==null ||
+        ((Number(c.consult_pct)>0||Number(c.procedure_pct)>0)&&!e.log)
+      );
+    },
+    entryEarned(e){
+      if(!this.confirmed(e))return 0;
+      const l=this.logs.find(l=>l.date===e.date&&l.clinic_id===e.clinic_id);
+      const c=this.clinicOf(e.clinic_id);
+      return e.base+(l?this._share(c,l.consult_total,l.procedure_total):0);
+    },
+    gross(){
+      const before=this.todayDate();
+      const worked=new Set(this.att.filter(a=>a.date<=before)
+        .map(a=>a.date+'|'+a.clinic_id));
+      let value=this.result.sessions.reduce((n,s)=>
+        n+(worked.has(s.date+'|'+s.clinic_id)?Number(s.base)||0:0),0);
+      for(const l of this.monthLogs()){
+        if(worked.has(l.date+'|'+l.clinic_id)){
+          value+=this._share(this.clinicOf(l.clinic_id),l.consult_total,l.procedure_total);
         }
-      };
-    }
-
-    function toISODate(date) {
-      const y = date.getFullYear();
-      const m = String(date.getMonth() + 1).padStart(2, '0');
-      const d = String(date.getDate()).padStart(2, '0');
-
-      return `${y}-${m}-${d}`;
-    }
-
-    function makeISO(year, month, day) {
-      return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    }
-
-    function normalizeDateString(value) {
-      if (!value) return '';
-
-      if (value instanceof Date) {
-        return toISODate(value);
       }
+      return value;
+    },
+    pendingCount(){
+      return this.monthEntries().filter(e=>this.confirmed(e)&&this.needsLog(e)).length;
+    },
 
-      const str = String(value).trim();
-
-      if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
-        return str.slice(0, 10);
+    editLog(date,clinic_id){
+      this.logForm={date,clinic_id,consult:'',proc:''};
+      this.fillLog();
+      this.tab='rec';
+      window.scrollTo({top:0,behavior:'smooth'});
+    },
+    fillLog(){
+      const l=this.logs.find(l=>l.date===this.logForm.date&&
+        l.clinic_id===this.logForm.clinic_id);
+      this.logForm.consult=l?.consult_total??'';
+      this.logForm.proc=l?.procedure_total??'';
+    },
+    async saveDaily(){
+      const f=this.logForm;
+      if(!f.clinic_id||!f.date||f.date>this.todayDate()){
+        return this.fail('請選擇診所及有效日期，不能填未來實際收入。');
       }
-
-      const parsed = new Date(str);
-
-      if (!Number.isNaN(parsed.getTime())) {
-        return toISODate(parsed);
+      const valid=v=>v!==''&&v!=null&&Number.isFinite(Number(v))&&Number(v)>=0;
+      if(!valid(f.consult)||!valid(f.proc)){
+        return this.fail('兩項都要填寫；確定冇收入先填 0。');
       }
+      const [year,month]=f.date.split('-').map(Number);
+      if(this.invoices.some(i=>i.clinic_id===f.clinic_id&&i.year===year&&i.month===month)){
+        return this.fail('此診所月份已有 Invoice。為免單據與收入不一致，不能直接修改；草稿可先刪除再重建。');
+      }
+      const {error}=await db.from('daily_logs').upsert({
+        clinic_id:f.clinic_id,date:f.date,
+        consult_total:Number(f.consult),
+        procedure_total:Number(f.proc)
+      },{onConflict:'clinic_id,date'});
+      if(error)return this.fail(error);
+      const difference=(year-this.y)*12+month-this.m;
+      if(difference)await this.shift(difference);
+      else await this.load();
+      if(this.err)return;
+      this.fillLog();
+      this.flash('診金記錄已儲存');
+    },
 
-      return '';
+    async saveRule(){
+      if(Calc.hoursOf(this.ruleForm)<=0){
+        return this.fail('結束時間必須遲於開始時間；跨夜更請拆開輸入。');
+      }
+      return await original.addRule.call(this);
+    },
+    async saveExtraChecked(){
+      const f=this.extraForm;
+      if(Number(f.hours)<0 ||
+         (f.fixed_amount!==''&&Number(f.fixed_amount)<0)){
+        return this.fail('時數及金額不能為負數。');
+      }
+      return await original.addExtra.call(this);
+    },
+
+    async invoiceChecked(row){
+      const c=row.clinic;
+      if(this.invOf(c.id))return this.fail('此診所本月已有 Invoice。');
+      if(!this.issueDate)return this.fail('請填發出日期。');
+      if(!this.attOk)return this.fail('無法讀取返工確認，暫時不能開單。');
+      if(c.procedure_pct==null){
+        return this.fail('請先在診所設定填小手術分成百分比；沒有分成請填 0。');
+      }
+      const sessions=this.result.sessions.filter(s=>s.clinic_id===c.id);
+      const logs=this.monthLogs().filter(l=>l.clinic_id===c.id);
+      const dates=new Set([...sessions.map(s=>s.date),...logs.map(l=>l.date)]);
+      if(!dates.size)return this.fail('本月沒有可開單記錄。');
+      for(const date of dates){
+        if(date>this.todayDate()){
+          return this.fail('本月仍有未來排班，尚未能產生全月 Invoice。');
+        }
+        if(!this.att.some(a=>a.clinic_id===c.id&&a.date===date)){
+          return this.fail(`${date} 尚未確認返工，請先到月曆確認。`);
+        }
+      }
+      const requiresShare=Number(c.consult_pct)>0||Number(c.procedure_pct)>0;
+      if(requiresShare){
+        const missing=sessions.find(s=>s.kind!=='special'&&
+          !logs.some(l=>l.date===s.date));
+        if(missing)return this.fail(`${missing.date} 分成待填，暫時不能開單。`);
+      }
+      const inv=Calc2.buildInvoice(
+        c,this.y,this.m,this.result.sessions,this.logs,this.issueDate
+      );
+      if(!Number.isFinite(inv.total)||inv.total<0){
+        return this.fail('Invoice 金額無效，請檢查設定。');
+      }
+      if(!confirm(`產生 ${c.name} Invoice，合共 ${this.money(inv.total)}？`))return;
+      return await this.add('invoices',{
+        clinic_id:c.id,year:this.y,month:this.m,
+        invoice_no:inv.invoice_no,issue_date:inv.issue_date,
+        due_date:inv.due_date,total:inv.total,snapshot:inv.snapshot
+      });
+    },
+    async reopenInvoice(inv){
+      if(!confirm('確認改回未收款？實際收入不會因此改變。'))return;
+      return await this.setStatus(inv,'sent');
     }
-  </script>
-
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  };
+}
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </body>
 </html>
