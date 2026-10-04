@@ -1,0 +1,491 @@
+/* 只影響病人預約介面 */
+.aw {
+  --aw-blue: #1a73e8;
+  --aw-border: #e3e7ed;
+  --aw-soft: #f8fafd;
+  --aw-count: 7;
+}
+
+.aw-shell {
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid var(--aw-border);
+  border-radius: 18px;
+  box-shadow: 0 4px 20px rgb(30 50 80 / 4%);
+}
+
+.aw-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 20px;
+}
+
+.aw-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.aw-heading h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.aw-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  background: #e8f0fe;
+  color: var(--aw-blue);
+  font-size: 23px;
+}
+
+.aw button.primary {
+  background: var(--aw-blue);
+  border-color: var(--aw-blue);
+}
+
+.aw-navigation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.aw-range {
+  margin-left: 8px;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.aw-arrow {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.aw-view {
+  display: inline-flex;
+  padding: 3px;
+  gap: 3px;
+  border-radius: 10px;
+  background: #edf2f8;
+}
+
+.aw-view button {
+  padding: 5px 14px;
+  border: 0;
+  background: transparent;
+}
+
+.aw-view button.active {
+  color: var(--aw-blue);
+  background: #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 8%);
+}
+
+.aw-filters {
+  display: grid;
+  grid-template-columns: 165px minmax(150px, 1fr) minmax(180px, 1.4fr);
+  gap: 12px;
+  padding: 0 20px 16px;
+}
+
+.aw-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0 20px 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.aw-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.aw-check input {
+  margin: 0;
+}
+
+.aw-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0 20px 14px;
+  font-size: 12px;
+}
+
+.aw-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.aw-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+}
+
+/* 24 小時，每分鐘 2px，每 15 分鐘一格 */
+.aw-scroll {
+  height: min(72vh, 780px);
+  min-height: 360px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-top: 1px solid var(--aw-border);
+}
+
+.aw-board {
+  min-width: calc(60px + var(--aw-count) * 124px);
+}
+
+.aw-columns {
+  display: grid;
+  grid-template-columns: 60px repeat(var(--aw-count), minmax(0, 1fr));
+}
+
+.aw-days {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  height: 76px;
+  background: #fff;
+  border-bottom: 1px solid var(--aw-border);
+}
+
+.aw-zone {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: #7b8494;
+  font-size: 10px;
+  text-align: center;
+  border-right: 1px solid var(--aw-border);
+}
+
+.aw-dayhead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  border-right: 1px solid var(--aw-border);
+  color: #6d7685;
+  font-size: 12px;
+}
+
+.aw-dayhead strong {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  font-size: 23px;
+  font-weight: 500;
+  color: #303846;
+  border-radius: 50%;
+}
+
+.aw-dayhead.is-today {
+  color: var(--aw-blue);
+}
+
+.aw-dayhead.is-today strong {
+  background: var(--aw-blue);
+  color: #fff;
+}
+
+.aw-dayhead.is-sunday:not(.is-today) strong,
+.aw-dayhead.is-sunday:not(.is-today) {
+  color: #bd4444;
+}
+
+.aw-body {
+  position: relative;
+  height: 2880px;
+}
+
+.aw-hours {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  height: 2880px;
+  background: #fff;
+  border-right: 1px solid var(--aw-border);
+}
+
+.aw-hour {
+  position: absolute;
+  right: 9px;
+  font-size: 11px;
+  line-height: 16px;
+  color: #7b8494;
+  font-variant-numeric: tabular-nums;
+}
+
+.aw-daycol {
+  position: relative;
+  height: 2880px;
+  min-width: 0;
+  border-right: 1px solid var(--aw-border);
+}
+
+.aw-daycol.is-today {
+  background: #f8fbff;
+}
+
+.aw-slot {
+  display: block;
+  width: 100%;
+  height: 30px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid #f1f3f6;
+  border-radius: 0;
+  background: transparent;
+}
+
+.aw-slot.aw-hourline {
+  border-top-color: #dde3eb;
+}
+
+.aw-slot:hover {
+  background: #eaf2ff;
+}
+
+.aw-event {
+  position: absolute;
+  z-index: 2;
+  min-width: 0;
+  margin: 0;
+  padding: 3px 5px;
+  overflow: hidden;
+  border: 0;
+  border-left: 3px solid var(--event-line);
+  border-radius: 5px;
+  background: var(--event-bg);
+  color: var(--event-ink);
+  text-align: left;
+  line-height: 1.25;
+  cursor: pointer;
+}
+
+.aw-event:hover {
+  border-color: var(--event-line);
+  box-shadow: 0 2px 7px rgb(25 45 80 / 18%);
+  filter: brightness(.97);
+}
+
+.aw-event strong,
+.aw-event small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: inherit;
+}
+
+.aw-event strong {
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.aw-event small {
+  margin-top: 3px;
+  font-size: 10px;
+}
+
+.aw-event.is-compact {
+  padding-top: 2px;
+}
+
+.aw-event.is-inactive {
+  opacity: .58;
+}
+
+.aw-event.is-inactive strong {
+  text-decoration: line-through;
+}
+
+.aw-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--aw-border);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.aw-help {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* 原生 dialog，外觀為右側編輯面板 */
+.aw-drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(540px, 100vw);
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 0;
+  border-radius: 18px 0 0 18px;
+  background: #f8fafd;
+  color: var(--ink);
+  box-shadow: -12px 0 50px rgb(20 35 60 / 18%);
+}
+
+.aw-drawer::backdrop {
+  background: rgb(20 30 50 / 28%);
+}
+
+.aw-drawer-head {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 22px;
+  background: #fff;
+  border-bottom: 1px solid var(--aw-border);
+}
+
+.aw-drawer-head h2 {
+  margin: 0;
+}
+
+.aw-drawer-content {
+  padding: 20px;
+}
+
+.aw-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.aw-span-2 {
+  grid-column: 1 / -1;
+}
+
+.aw-schedule {
+  padding: 13px;
+  border: 1px solid #dbe3ed;
+  border-radius: 11px;
+  background: #fff;
+  font-size: 13px;
+}
+
+.aw-schedule.is-ok {
+  border-color: #b8dec6;
+  background: #f0faf3;
+}
+
+.aw-schedule.is-warning {
+  border-color: #ecd19c;
+  background: #fff9eb;
+}
+
+.aw-schedule.is-error {
+  border-color: #efbac0;
+  background: #fff2f3;
+}
+
+.aw-editor-actions {
+  padding-top: 4px;
+}
+
+.aw-record-actions {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--aw-border);
+}
+
+.aw-drawer .panel {
+  padding: 15px;
+}
+
+@media (max-width: 650px) {
+  .aw-toolbar {
+    padding: 15px;
+    gap: 12px;
+  }
+
+  .aw-heading h2 {
+    font-size: 19px;
+  }
+
+  .aw-filters {
+    grid-template-columns: 1fr 1fr;
+    padding: 0 15px 14px;
+  }
+
+  .aw-filters > label:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .aw-options,
+  .aw-legend {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+  .aw-range {
+    font-size: 15px;
+    margin-left: 3px;
+  }
+
+  .aw-scroll {
+    height: 65vh;
+  }
+
+  .aw-drawer {
+    border-radius: 0;
+  }
+
+  .aw-drawer-content {
+    padding: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .aw-drawer[open] {
+    animation: aw-enter .16s ease-out;
+  }
+
+  @keyframes aw-enter {
+    from {
+      opacity: .6;
+      transform: translateX(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+}
