@@ -147,6 +147,47 @@ apQueueSchedule() {
   }, 300);
 },
 
+async apCheckSchedule(form) {
+  const unavailable = message => ({
+    level: 'unknown',
+    messages: [message]
+  });
+
+  if (
+    typeof window.AppointmentSchedule?.check !== 'function'
+  ) {
+    return unavailable(
+      '更表核對模組未載入，請檢查 appointment-schedule.js 是否已正確載入。'
+    );
+  }
+
+  try {
+    const checked = await window.AppointmentSchedule.check(db, form);
+
+    const levels = [
+      'input', 'unknown', 'block', 'warn', 'ok', 'skip'
+    ];
+
+    if (
+      !checked ||
+      !levels.includes(checked.level) ||
+      !Array.isArray(checked.messages) ||
+      !checked.messages.every(message => typeof message === 'string') ||
+      (checked.level === 'skip' && form.status !== 'cancelled')
+    ) {
+      return unavailable(
+        '更表核對結果無效，暫時不能儲存，請重新載入頁面再試。'
+      );
+    }
+
+    return checked;
+  } catch {
+    return unavailable(
+      '無法核對更表，請檢查登入、網絡及更表設定後再試。'
+    );
+  }
+},
+    
 async apPreviewSchedule() {
   const seq = ++this.apScheduleSeq;
   const user = this.session?.user?.id;
@@ -155,7 +196,7 @@ async apPreviewSchedule() {
 
   if (!user) return;
 
-  const checked = await AppointmentSchedule.check(db, form);
+const checked = await this.apCheckSchedule(form);
 
   if (
     seq !== this.apScheduleSeq ||
@@ -470,9 +511,12 @@ this.apSchedule = {
     },
 
     apPayload(form) {
-      if (!form.schedule_checked) {
-        throw safeError('請先核對當日返工時段及休假，再勾選確認。');
-      }
+if (
+  form.status !== 'cancelled' &&
+  !form.schedule_checked
+) {
+  throw safeError('請先核對當日返工時段及休假，再勾選確認。');
+}
 
       const label = form.patient_label.trim();
       const phone = form.phone.trim();
@@ -553,7 +597,7 @@ const payload = this.apPayload(f);
 const stamp = JSON.stringify(f);
 
 // 儲存前重新讀取，唔只相信畫面上的預覽結果。
-const checked = await AppointmentSchedule.check(db, f);
+const checked = await this.apCheckSchedule(f);
 
 if (!alive()) return;
 
