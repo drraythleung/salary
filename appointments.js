@@ -511,13 +511,8 @@ this.apSchedule = {
     },
 
     apPayload(form) {
-if (
-  form.status !== 'cancelled' &&
-  !form.schedule_checked
-) {
-  throw safeError('請先核對當日返工時段及休假，再勾選確認。');
-}
-
+      // 不再要求人手勾選。
+      // apSave() 仍會在寫入前重新核對更表。
       const label = form.patient_label.trim();
       const phone = form.phone.trim();
 
