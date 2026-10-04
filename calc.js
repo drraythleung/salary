@@ -44,7 +44,16 @@ const Calc = (() => {
         if (leave) { skipped.push({ ...base, why: 'leave', reason: '年假' + (leave.reason ? `(${leave.reason})` : '') }); continue; }
 
         const hours = work && work.hours != null ? Number(work.hours) : hoursOf(r);
-        sessions.push({ ...base, kind: 'regular', hours, base: hours * Number(c.hourly_rate), ov_id: work ? work.id : null });
+        sessions.push({
+          ...base,
+          kind: 'regular',
+          hours,
+          base: hours * Number(c.hourly_rate),
+          ov_id: work ? work.id : null,
+        
+          // override 只有時數，無法確定改咗開始時間定結束時間。
+          time_known: !(work && work.hours != null)
+        });
       }
     }
 
