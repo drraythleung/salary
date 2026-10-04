@@ -1277,7 +1277,10 @@ window.addEventListener('error', function(event){
 },true);
 </script>
 
+<!-- 先載入 Supabase library -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+<!-- 再載入設定及應用程式 -->
 <script src="./config.js"></script>
 <script src="./holidays.js"></script>
 <script src="./calc.js"></script>
@@ -1286,7 +1289,8 @@ window.addEventListener('error', function(event){
 <script src="./app.js"></script>
 <script src="./dashboard.js"></script>
 <script src="./appointments.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- 最後啟動 Alpine -->
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
 <script>
