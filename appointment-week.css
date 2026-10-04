@@ -581,3 +581,64 @@
   background: #fff1f0;
   color: #a12622;
 }
+/* ========================================
+   更表整合：星期標題高度及提示排版
+   放在 appointment-week.css 最尾
+   ======================================== */
+
+/* 原本固定 76px，改為可以容納更表提示 */
+.aw .aw-days {
+  height: auto;
+  min-height: 76px;
+  align-items: stretch;
+}
+
+/* 日期靠上排列，避免有提示的日子與其他日期上下錯位 */
+.aw .aw-dayhead {
+  height: auto;
+  min-height: 76px;
+  min-width: 0;
+  justify-content: flex-start;
+  padding: 8px 4px;
+}
+
+/* 日期圓圈維持尺寸 */
+.aw .aw-dayhead > strong {
+  flex-shrink: 0;
+}
+
+/* 休假／取消／時間待確認提示 */
+.aw .aw-work-notes {
+  width: 100%;
+  min-width: 0;
+  margin-top: 4px;
+  white-space: normal;
+
+  /* 提示太多時局部捲動，避免標題佔滿時間表 */
+  max-height: 96px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.aw .aw-work-note {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* 更表狀態訊息容許長文字換行 */
+.aw .aw-work-status {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 650px) {
+  .aw .aw-dayhead {
+    padding-left: 3px;
+    padding-right: 3px;
+  }
+
+  .aw .aw-work-note {
+    padding: 3px 4px;
+    font-size: 10px;
+  }
+}
