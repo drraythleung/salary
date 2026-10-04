@@ -82,7 +82,7 @@ function incomeDashboard(base) {
 
     tabs: [
       base.tabs[0],
-      ['dash', 'Dashboard／收入總覽'],
+      ['dash', '年度總覽'],
       ...base.tabs.slice(1)
     ],
 
