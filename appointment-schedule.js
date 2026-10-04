@@ -317,5 +317,343 @@ window.AppointmentSchedule = (() => {
     }
   }
 
-  return { check };
+// 從一個已知時段扣除休假／取消時段。
+  function subtractSpans(source, exclusions) {
+    let parts = [source];
+
+    for (const cut of exclusions) {
+      const next = [];
+
+      for (const part of parts) {
+        if (!overlaps(part, cut)) {
+          next.push(part);
+          continue;
+        }
+
+        if (part.start < cut.start) {
+          next.push({
+            start: part.start,
+            end: Math.min(part.end, cut.start)
+          });
+        }
+
+        if (cut.end < part.end) {
+          next.push({
+            start: Math.max(part.start, cut.end),
+            end: part.end
+          });
+        }
+      }
+
+      parts = next;
+    }
+
+    return parts.filter(part => part.end > part.start);
+  }
+
+  function nextDate(value) {
+    const d = new Date(`${value}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + 1);
+    return d.toISOString().slice(0, 10);
+  }
+
+  async function calendar(client, first, last) {
+    if (
+      !validDate(first) ||
+      !validDate(last) ||
+      first > last
+    ) {
+      throw new Error('Invalid calendar range');
+    }
+
+    const dayCount =
+      (new Date(`${last}T12:00:00Z`) -
+       new Date(`${first}T12:00:00Z`)) / 86400000 + 1;
+
+    if (dayCount > 31) {
+      throw new Error('Calendar range too large');
+    }
+
+    // 讀取涉及月份的完整資料，讓 generateMonth 使用。
+    // 一個跨月週會分別產生兩個月份，再抽取畫面日期。
+    const monthFirst = `${first.slice(0, 7)}-01`;
+
+    const endDate = new Date(
+      `${last.slice(0, 7)}-01T12:00:00Z`
+    );
+    endDate.setUTCMonth(endDate.getUTCMonth() + 1);
+    endDate.setUTCDate(0);
+
+    const monthLast = endDate.toISOString().slice(0, 10);
+
+    const [clinics, rules, leaves, extras, overrides] =
+      await Promise.all([
+        readAll(client, 'clinics'),
+        readAll(client, 'schedule_rules'),
+
+        readAll(client, 'leaves', q =>
+          q.lte('start_date', monthLast)
+            .gte('end_date', monthFirst)
+        ),
+
+        readAll(client, 'extra_sessions', q =>
+          q.gte('date', monthFirst).lte('date', monthLast)
+        ),
+
+        readAll(client, 'overrides', q =>
+          q.gte('date', monthFirst).lte('date', monthLast)
+        )
+      ]);
+
+    if (
+      typeof HK_HOLIDAYS === 'undefined' ||
+      !HK_HOLIDAYS ||
+      typeof HK_HOLIDAYS !== 'object' ||
+      typeof Calc === 'undefined' ||
+      typeof Calc.generateMonth !== 'function'
+    ) {
+      throw new Error('Schedule dependencies unavailable');
+    }
+
+    const D = {
+      clinics,
+      rules,
+      leaves,
+      extras,
+      overrides,
+      holidays: HK_HOLIDAYS
+    };
+
+    const slots = [];
+    const notes = {};
+    const months = new Map();
+
+    const nameOf = id => {
+      const clinic = clinics.find(c => same(c.id, id));
+      return clinic?.name || clinic?.code || '其他診所';
+    };
+
+    function note(date, text) {
+      if (!notes[date]) notes[date] = [];
+      if (!notes[date].includes(text)) notes[date].push(text);
+    }
+
+    for (
+      let date = first;
+      date <= last;
+      date = nextDate(date)
+    ) {
+      const monthKey = date.slice(0, 7);
+
+      if (!months.has(monthKey)) {
+        const [year, month] = monthKey.split('-').map(Number);
+        const generated = Calc.generateMonth(year, month, D);
+
+        if (
+          !Array.isArray(generated?.sessions) ||
+          !Array.isArray(generated?.skipped)
+        ) {
+          throw new Error('Invalid generated schedule');
+        }
+
+        months.set(monthKey, generated);
+      }
+
+      const generated = months.get(monthKey);
+
+      const dayLeaves = leaves.filter(l =>
+        l.start_date <= date && l.end_date >= date
+      );
+
+      const dayCancels = overrides.filter(o =>
+        o.date === date && o.action === 'cancel'
+      );
+
+      // 與 check() 相同：全日休假優先。
+      if (dayLeaves.some(l => l.period === 'full')) {
+        note(date, '全日休假');
+        continue;
+      }
+
+      const weekday =
+        new Date(`${date}T00:00:00Z`).getUTCDay();
+
+      const dayRules = rules.filter(r => {
+        const clinic = clinics.find(c =>
+          same(c.id, r.clinic_id)
+        );
+
+        return clinic?.active &&
+          r.active !== false &&
+          r.weekday === weekday &&
+          (!r.valid_from || date >= r.valid_from) &&
+          (!r.valid_to || date <= r.valid_to);
+      });
+
+      // 半日休假按 rule.block 對應，不假設 12:00 分界。
+      const leaveCuts = [];
+      let unresolvedLeave = false;
+
+      for (const leave of dayLeaves) {
+        const matching = dayRules.filter(r =>
+          r.block === leave.period
+        );
+        const spans = matching.map(interval);
+
+        if (!matching.length || spans.some(s => !s)) {
+          unresolvedLeave = true;
+          note(
+            date,
+            '半日休假時間未能確認，暫不顯示可點擊返工時段。'
+          );
+        } else {
+          leaveCuts.push(...spans);
+        }
+      }
+
+      for (const cancel of dayCancels) {
+        if (cancel.block !== 'all') continue;
+
+        note(
+          date,
+          cancel.clinic_id
+            ? `${nameOf(cancel.clinic_id)}：全日取消`
+            : '全部診所：全日取消'
+        );
+      }
+
+      for (const skipped of generated.skipped.filter(s =>
+        s.date === date && s.why === 'holiday'
+      )) {
+        note(
+          date,
+          `${nameOf(skipped.clinic_id)}：有固定更因公眾假期停開`
+        );
+      }
+
+      const sessions = generated.sessions.filter(s =>
+        s.date === date
+      );
+
+      for (const session of sessions) {
+        const clinic = clinics.find(c =>
+          same(c.id, session.clinic_id)
+        );
+
+        if (!clinic?.active) continue;
+
+        const clinicName = nameOf(session.clinic_id);
+
+        const cancels = dayCancels.filter(o =>
+          !o.clinic_id ||
+          same(o.clinic_id, session.clinic_id)
+        );
+
+        // 與 check() 相同：全日取消不當成返工時段。
+        if (cancels.some(o => o.block === 'all')) continue;
+
+        if (session.kind !== 'regular') {
+          note(
+            date,
+            `${clinicName}：加節／特更，時間待確認`
+          );
+          continue;
+        }
+
+        if (session.time_known !== true) {
+          note(
+            date,
+            `${clinicName}：已調整時數，時間待確認`
+          );
+          continue;
+        }
+
+        const span = interval(session);
+
+        if (!span) {
+          note(
+            date,
+            `${clinicName}：固定更時間無效或跨午夜，請核對更表`
+          );
+          continue;
+        }
+
+        if (unresolvedLeave) continue;
+
+        const cancelCuts = [];
+        let unresolvedCancel = false;
+
+        for (const cancel of cancels) {
+          const matching = dayRules.filter(r =>
+            same(r.clinic_id, session.clinic_id) &&
+            r.block === cancel.block
+          );
+
+          const spans = matching.map(interval);
+
+          if (!matching.length || spans.some(s => !s)) {
+            unresolvedCancel = true;
+            note(
+              date,
+              `${clinicName}：取消更次時間未能確認，暫不顯示可點擊返工時段`
+            );
+          } else {
+            cancelCuts.push(...spans);
+          }
+        }
+
+        if (unresolvedCancel) continue;
+
+        const parts = subtractSpans(
+          span,
+          [...leaveCuts, ...cancelCuts]
+        );
+
+        for (const part of parts) {
+          slots.push({
+            date,
+            clinic_id: session.clinic_id,
+            clinic_name: clinicName,
+            start: part.start,
+            end: part.end
+          });
+        }
+      }
+    }
+
+    // 同一診所的重疊／相連時段合併，避免重複底色及標籤。
+    slots.sort((a, b) =>
+      a.date.localeCompare(b.date) ||
+      String(a.clinic_id).localeCompare(String(b.clinic_id)) ||
+      a.start - b.start ||
+      a.end - b.end
+    );
+
+    const merged = [];
+
+    for (const slot of slots) {
+      const previous = merged[merged.length - 1];
+
+      if (
+        previous &&
+        previous.date === slot.date &&
+        same(previous.clinic_id, slot.clinic_id) &&
+        slot.start <= previous.end
+      ) {
+        previous.end = Math.max(previous.end, slot.end);
+      } else {
+        merged.push({ ...slot });
+      }
+    }
+
+    return {
+      slots: merged.map((slot, index) => ({
+        ...slot,
+        id: `work-${slot.date}-${index}`
+      })),
+      notes
+    };
+  }
+
+  return { check, calendar };
 })();
