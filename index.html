@@ -208,7 +208,11 @@ details>summary{cursor:pointer;font-weight:650}
   <noscript>請啟用 JavaScript。</noscript>
 </div>
 
-<main class="wrap" x-data="incomeDashboard(incomeApp())" x-cloak>
+<main
+  class="wrap"
+  x-data="incomeAppointments(incomeDashboard(incomeApp()))"
+  x-init="apInit()"
+  x-cloak>
   <div x-show="loading" class="panel">正在讀取資料……</div>
   <div x-show="err" class="notice error" role="alert">
     <span x-text="err"></span>
@@ -217,7 +221,7 @@ details>summary{cursor:pointer;font-weight:650}
   <div x-show="ok" class="toast" role="status" x-text="ok"></div>
   <p x-show="busy" role="status">處理中，請稍候……</p>
 
-  <fieldset :disabled="busy || loading">
+  <fieldset :disabled="busy || loading || apBusy">
     <template x-if="!session && !loading">
       <form class="panel login stack" @submit.prevent="run(()=>signIn())">
         <h2>登入</h2>
@@ -836,7 +840,409 @@ details>summary{cursor:pointer;font-weight:650}
             </template>
           </div>
         </section>
+<!-- 病人預約 -->
+<section x-show="tab==='appt'">
 
+  <div class="panel">
+    <div class="bar">
+      <div>
+        <h2 style="margin-bottom:4px">病人預約</h2>
+        <small>
+          內部預約簿 · 單醫生 · 全部時間為香港時間
+        </small>
+      </div>
+
+      <div class="actions">
+        <button type="button" @click="apRefresh()">
+          重新讀取預約
+        </button>
+
+        <button type="button" class="primary" @click="apNew()">
+          新增預約／清空表單
+        </button>
+      </div>
+    </div>
+
+    <div class="notice">
+      此版本未自動核對固定更、加節及休假。
+      儲存前請核對實際返工時段。
+      修改更表不會自動更改病人預約；
+      完成預約亦不會自動加入診金收入。
+    </div>
+
+    <div
+      class="notice error"
+      role="alert"
+      x-show="apError"
+      x-text="apError">
+    </div>
+
+    <div
+      class="notice success"
+      role="status"
+      x-show="apNotice"
+      x-text="apNotice">
+    </div>
+
+    <p x-show="apBusy" role="status">
+      正在處理預約資料……
+    </p>
+
+    <div class="formgrid">
+      <label>
+        查看日期
+        <input
+          type="date"
+          x-model="apDate"
+          @change="apRefresh()">
+      </label>
+
+      <label>
+        篩選診所
+        <select x-model="apClinic">
+          <option value="">全部診所</option>
+
+          <template x-for="c in clinics" :key="c.id">
+            <option :value="String(c.id)" x-text="c.name"></option>
+          </template>
+        </select>
+      </label>
+
+      <label>
+        搜尋當日預約
+        <input
+          type="search"
+          x-model="apSearch"
+          placeholder="姓名／病歷編號／電話"
+          autocomplete="off">
+      </label>
+    </div>
+
+    <div class="actions" style="margin-top:12px">
+      <button type="button" @click="apMoveDay(-1)">
+        ‹ 前一日
+      </button>
+
+      <button
+        type="button"
+        @click="apDate=apToday(); apRefresh()">
+        今日
+      </button>
+
+      <button type="button" @click="apMoveDay(1)">
+        後一日 ›
+      </button>
+    </div>
+  </div>
+
+  <!-- 新增／修改 -->
+  <form
+    class="panel stack"
+    x-ref="apEditor"
+    autocomplete="off"
+    @submit.prevent="apSave()">
+
+    <div class="bar">
+      <h2
+        style="margin:0"
+        x-text="apForm.version>0 ? '修改／改期／更改狀態' : '新增預約'">
+      </h2>
+
+      <span
+        class="badge"
+        x-show="apForm.version>0"
+        x-text="'記錄版本 '+apForm.version">
+      </span>
+    </div>
+
+    <div class="formgrid">
+
+      <label>
+        病人姓名或病歷編號 *
+        <input
+          x-model="apForm.patient_label"
+          maxlength="100"
+          placeholder="只填識別預約所需資料"
+          required>
+      </label>
+
+      <label>
+        聯絡電話（可留空）
+        <input
+          type="tel"
+          x-model="apForm.phone"
+          maxlength="32"
+          autocomplete="off">
+      </label>
+
+      <label>
+        診所 *
+        <select
+          x-model="apForm.clinic_id"
+          @change="apForm.schedule_checked=false"
+          required>
+
+          <option value="">請選擇</option>
+
+          <template
+            x-if="apForm.version>0 &&
+              !clinics.some(c =>
+                String(c.id)===String(apForm.clinic_id)
+              )">
+            <option
+              :value="apForm.clinic_id"
+              x-text="apForm.clinic_name+'（原有診所）'">
+            </option>
+          </template>
+
+          <template x-for="c in clinics" :key="c.id">
+            <option :value="String(c.id)" x-text="c.name"></option>
+          </template>
+        </select>
+      </label>
+
+      <label>
+        日期 *
+        <input
+          type="date"
+          x-model="apForm.date"
+          @change="apForm.schedule_checked=false"
+          required>
+      </label>
+
+      <label>
+        預約類型 *
+        <select
+          x-model="apForm.kind"
+          @change="apSetEnd()">
+
+          <template x-for="k in apKinds" :key="k[0]">
+            <option
+              :value="k[0]"
+              x-text="k[1]+'（預設 '+k[2]+' 分鐘）'">
+            </option>
+          </template>
+        </select>
+      </label>
+
+      <label>
+        開始時間 *
+        <input
+          type="time"
+          step="60"
+          x-model="apForm.start"
+          @change="apSetEnd()"
+          required>
+      </label>
+
+      <label>
+        結束時間 *
+        <input
+          type="time"
+          step="60"
+          x-model="apForm.end"
+          @change="apForm.schedule_checked=false"
+          required>
+      </label>
+
+      <label>
+        預約狀態
+        <select x-model="apForm.status">
+          <template x-for="s in apStatuses" :key="s[0]">
+            <option :value="s[0]" x-text="s[1]"></option>
+          </template>
+        </select>
+      </label>
+
+    </div>
+
+    <p class="muted">
+      更改類型或開始時間會重新帶入預設結束時間；
+      之後仍可自行修改。此處不記錄診斷、身份證號碼或病歷內容。
+    </p>
+
+    <label>
+      <input
+        type="checkbox"
+        x-model="apForm.schedule_checked"
+        required>
+      我已核對當日實際返工時間、休假及診所安排。
+    </label>
+
+    <div class="actions">
+      <button type="submit" class="primary">
+        儲存預約
+      </button>
+
+      <button type="button" @click="apNew()">
+        放棄編輯／清空
+      </button>
+    </div>
+  </form>
+
+  <!-- 當日列表 -->
+  <div class="panel scroll">
+    <div class="bar">
+      <h2 x-text="apDate+' · 預約列表'"></h2>
+
+      <small
+        x-show="apReady"
+        x-text="'符合篩選 '+apFiltered().length+' 筆；當日共 '+apRows.length+' 筆'">
+      </small>
+    </div>
+
+    <p class="muted">
+      搜尋只涵蓋所選日期。
+      已取消及失約仍保留在列表，但不佔用時段。
+    </p>
+
+    <p
+      class="muted"
+      x-show="apReady && !apFiltered().length">
+      所選日期及篩選條件下沒有預約。
+    </p>
+
+    <table x-show="apFiltered().length">
+      <thead>
+        <tr>
+          <th>時間</th>
+          <th>病人／病歷編號</th>
+          <th>電話</th>
+          <th>診所</th>
+          <th>類型</th>
+          <th>狀態</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <template x-for="a in apFiltered()" :key="a.id">
+          <tr
+            :style="{
+              opacity:
+                ['cancelled','no_show'].includes(a.status)
+                ? '.6' : '1'
+            }">
+
+            <td
+              x-text="apTime(a.starts_at)+'–'+apTime(a.ends_at)">
+            </td>
+
+            <td x-text="a.patient_label"></td>
+            <td x-text="a.phone || '—'"></td>
+            <td x-text="a.clinic_name"></td>
+            <td x-text="apKindLabel(a.kind)"></td>
+
+            <td>
+              <span
+                class="badge"
+                x-text="apStatusLabel(a.status)">
+              </span>
+            </td>
+
+            <td>
+              <div class="actions">
+                <button type="button" @click="apEdit(a)">
+                  修改／改期／狀態
+                </button>
+
+                <button type="button" @click="apHistory(a)">
+                  紀錄
+                </button>
+
+                <button
+                  type="button"
+                  x-show="!['cancelled','no_show','completed'].includes(a.status)"
+                  @click="apCopyReminder(a)">
+                  複製提醒
+                </button>
+
+                <button
+                  type="button"
+                  class="danger"
+                  x-show="!['cancelled','no_show','completed'].includes(a.status)"
+                  @click="apCancel(a)">
+                  取消
+                </button>
+              </div>
+            </td>
+
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 手動提醒 -->
+  <div class="panel stack" x-show="apReminder">
+    <h2>預約提醒文字</h2>
+
+    <p class="muted">
+      不會自動發送。
+      請先核對收件人、日期、時間及診所，避免發錯病人。
+    </p>
+
+    <textarea
+      rows="4"
+      readonly
+      :value="apReminder"
+      @focus="$el.select()">
+    </textarea>
+
+    <button type="button" @click="apReminder=''">
+      關閉
+    </button>
+  </div>
+
+  <!-- 更改紀錄 -->
+  <div class="panel stack" x-show="apHistoryTitle">
+    <div class="bar">
+      <h2 x-text="apHistoryTitle"></h2>
+
+      <button
+        type="button"
+        @click="apHistoryTitle=''; apEvents=[]">
+        關閉
+      </button>
+    </div>
+
+    <p class="muted">
+      保留改期及狀態變更前後資料；
+      姓名／電話只記錄「曾修改」，不在此複製舊值。
+      此紀錄不包含瀏覽或複製提醒的操作。
+    </p>
+
+    <template x-for="event in apEvents" :key="event.id">
+      <div class="panel">
+        <strong
+          x-text="apDateTime(event.created_at)+' · '+
+            (event.action==='created' ? '建立預約' : '修改預約')">
+        </strong>
+
+        <p
+          class="muted"
+          x-text="'操作帳戶：'+(event.actor_id || '資料庫管理操作')">
+        </p>
+
+        <p
+          x-show="event.old_schedule"
+          x-text="'之前：'+apScheduleText(event.old_schedule)">
+        </p>
+
+        <p
+          x-text="'之後：'+apScheduleText(event.new_schedule)">
+        </p>
+
+        <p
+          class="muted"
+          x-show="event.patient_details_changed">
+          此次亦修改了病人姓名／編號或聯絡電話。
+        </p>
+      </div>
+    </template>
+  </div>
+
+</section>
         <!-- 個人資料 -->
         <section x-show="tab==='settings'">
           <form class="panel stack" @submit.prevent="run(()=>saveProfile())">
@@ -871,13 +1277,17 @@ window.addEventListener('error', function(event){
 },true);
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script src="./config.js"></script>
 <script src="./holidays.js"></script>
 <script src="./calc.js"></script>
 <script src="./calc2.js"></script>
 <script src="./invoice.js"></script>
 <script src="./app.js"></script>
+<script src="./dashboard.js"></script>
+<script src="./appointments.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
 <script>
 function incomeApp(){
@@ -1098,7 +1508,5 @@ function incomeApp(){
   };
 }
 </script>
-<script src="./dashboard.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </body>
 </html>
