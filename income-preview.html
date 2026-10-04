@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>診金預算｜UI 預覽</title>
+
+  <style>
+    :root {
+      --bg: #f4f7fa;
+      --surface: #ffffff;
+      --ink: #172b3a;
+      --muted: #70818f;
+      --line: #e4ebef;
+      --blue: #3576c4;
+      --green: #197563;
+      --amber: #a36715;
+      --radius: 20px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "Noto Sans TC", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button { font: inherit; cursor: pointer; }
+    button:focus-visible, summary:focus-visible {
+      outline: 3px solid #76b5f5;
+      outline-offset: 4px;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .header-inner {
+      max-width: 1240px;
+      margin: auto;
+      padding: 20px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: #e7f4f0;
+      color: var(--green);
+      font-size: 26px;
+      font-weight: 500;
+    }
+
+    .brand strong { display: block; font-size: 17px; }
+    .brand small { color: var(--muted); font-size: 11px; letter-spacing: 1.8px; }
+
+    .preview {
+      color: var(--muted);
+      background: #f3f6f8;
+      padding: 7px 11px;
+      border-radius: 8px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    main {
+      max-width: 1240px;
+      margin: auto;
+      padding: 30px 28px 48px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .eyebrow {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.8px;
+      margin-bottom: 7px;
+    }
+
+    h1 { margin: 0; font-size: 28px; letter-spacing: -1px; }
+    .toolbar p { margin: 7px 0 0; color: var(--muted); font-size: 13px; }
+
+    .date-pill {
+      background: white;
+      border: 1px solid var(--line);
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .income-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .income-card {
+      padding: 25px 28px;
+      border-radius: var(--radius);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .estimated {
+      background: #edf4fd;
+      border: 1px solid #dce8f7;
+    }
+
+    .actual {
+      background: #173e37;
+      color: white;
+      border: 1px solid #173e37;
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .english { font-size: 14px; font-weight: 600; }
+    .chinese { margin-top: 5px; color: var(--muted); font-size: 13px; }
+    .actual .chinese { color: #b9d1c9; }
+
+    .card-symbol {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: #ffffff80;
+      color: var(--blue);
+      font-size: 21px;
+    }
+
+    .actual .card-symbol { color: #a7ddc9; background: #ffffff12; }
+
+    .amount {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin: 24px 0 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .currency { font-size: 18px; font-weight: 500; opacity: .7; }
+    .number { font-size: clamp(36px, 4vw, 49px); font-weight: 700; letter-spacing: -2px; }
+
+    .card-caption { font-size: 12px; color: #617b97; line-height: 1.7; }
+    .actual .card-caption { color: #b9d1c9; }
+
+    .card-bottom {
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px solid #d5e3f3;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 12px;
+      color: #536b86;
+    }
+
+    .actual .card-bottom { border-color: #ffffff20; color: #e1eee9; }
+    .pending-text { color: #ffe0a2; }
+
+    .notice {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 13px 17px;
+      margin: 16px 0 22px;
+      background: #fff9ed;
+      border: 1px solid #f1e5ca;
+      border-radius: 12px;
+      color: #806333;
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 310px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .panel {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .calendar-panel { padding: 22px; }
+
+    .section-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    h2 { margin: 0; font-size: 17px; }
+
+    .legend { display: flex; gap: 12px; font-size: 11px; color: var(--muted); }
+    .legend span { display: flex; align-items: center; gap: 5px; }
+    .dot { width: 6px; height: 6px; display: inline-block; border-radius: 50%; }
+    .dot.green { background: #339a7a; }
+    .dot.amber { background: #d6a047; }
+    .dot.blue { background: #71a0da; }
+
+    .weekdays, .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 7px;
+    }
+
+    .weekdays { margin-bottom: 9px; }
+    .weekdays span {
+      text-align: center;
+      padding: 5px 0;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .day {
+      min-height: 94px;
+      padding: 10px 8px;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      background: #f7f9fb;
+      color: var(--ink);
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      transition: background .15s, border-color .15s;
+    }
+
+    .day:hover { background: #edf3f6; }
+    .day.has-work { background: #f0f7fd; }
+    .day.completed { background: #edf7f2; }
+    .day.pending { background: #fff8eb; }
+    .day.selected {
+      border-color: var(--green);
+      box-shadow: 0 0 0 1px var(--green);
+    }
+
+    .day-number {
+      font-size: 12px;
+      font-weight: 650;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .today-mark { color: var(--green); font-size: 9px; }
+    .clinic-name { font-size: 10px; color: #6c8292; }
+    .day-value { margin-top: auto; font-size: 11px; font-weight: 650; }
+    .day.pending .day-value { color: var(--amber); }
+    .day.has-work .day-value { color: var(--blue); }
+    .day.completed .day-value { color: var(--green); }
+
+    .calendar-foot {
+      margin: 16px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.7;
+    }
+
+    .detail-panel { padding: 23px; }
+    .detail-top { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+    .badge { padding: 5px 9px; border-radius: 7px; font-size: 11px; }
+    .badge.pending { color: var(--amber); background: #fff3db; }
+    .badge.completed { color: var(--green); background: #e9f5ee; }
+    .badge.future { color: var(--blue); background: #edf4fd; }
+    .badge.rest { color: var(--muted); background: #f2f5f7; }
+
+    .detail-subtitle { margin: 10px 0 22px; color: var(--muted); font-size: 12px; }
+    .detail-amount { font-size: 30px; font-weight: 700; letter-spacing: -1px; margin: 7px 0 20px; }
+    .label { font-size: 11px; color: var(--muted); }
+
+    .rows { border-top: 1px solid var(--line); padding-top: 7px; }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 11px 0;
+      font-size: 12px;
+    }
+
+    .row span { color: var(--muted); }
+    .row strong { font-weight: 600; }
+    .row strong.missing { color: var(--amber); }
+    .detail-note {
+      padding: 12px;
+      margin-top: 15px;
+      border-radius: 10px;
+      font-size: 11px;
+      line-height: 1.8;
+      background: #f5f8fa;
+      color: var(--muted);
+    }
+
+    details { margin-top: 20px; padding: 18px 22px; }
+    summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+    .breakdown {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+      margin-top: 20px;
+    }
+    .breakdown span { display: block; font-size: 11px; color: var(--muted); }
+    .breakdown strong { display: block; margin-top: 8px; font-size: 19px; }
+    footer { padding-top: 23px; color: var(--muted); font-size: 11px; text-align: center; }
+
+    @media (max-width: 950px) {
+      .workspace { grid-template-columns: minmax(0, 1fr) 270px; gap: 14px; }
+      .calendar-panel { padding: 17px; }
+      .calendar, .weekdays { gap: 4px; }
+      .day { padding: 8px 5px; }
+    }
+
+    @media (max-width: 760px) {
+      main { padding: 24px 16px; }
+      .header-inner { padding: 16px; }
+      .workspace { grid-template-columns: 1fr; }
+      .income-grid { gap: 12px; }
+      .income-card { padding: 20px; }
+      .card-bottom { flex-direction: column; }
+      .detail-panel { padding: 22px; }
+      .breakdown { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 480px) {
+      h1 { font-size: 25px; }
+      .income-grid { grid-template-columns: 1fr; }
+      .amount { margin: 16px 0 8px; }
+      .card-bottom { flex-direction: row; margin-top: 14px; }
+      .number { font-size: 42px; }
+      .calendar-panel { padding: 14px; }
+      .day { min-height: 82px; padding: 8px 4px; border-radius: 8px; }
+      .day-value { font-size: 9px; }
+      .clinic-name { font-size: 9px; }
+      .legend { gap: 9px; }
+      .date-pill { padding: 9px 10px; font-size: 11px; }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">＋</div>
+        <div>
+          <strong>診金預算</strong>
+          <small>CLINIC INCOME</small>
+        </div>
+      </div>
+      <span class="preview">UI 預覽 · 示範資料</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="toolbar">
+      <div>
+        <div class="eyebrow">MONTHLY OVERVIEW</div>
+        <h1>2026年10月</h1>
+        <p>預計會賺幾多，同實際已賺幾多。</p>
+      </div>
+      <button class="date-pill" id="todayButton">返回 10月4日</button>
+    </section>
+
+    <section class="income-grid" aria-label="本月收入">
+      <article class="income-card estimated">
+        <div class="card-top">
+          <div>
+            <div class="english">Estimated Income</div>
+            <div class="chinese">本月預計收入</div>
+          </div>
+          <div class="card-symbol" aria-hidden="true">↗</div>
+        </div>
+
+        <div class="amount">
+          <span class="currency">HK$</span>
+          <span class="number" id="estimatedTotal"></span>
+        </div>
+
+        <div class="card-caption">
+          全月時薪／固定收入＋估算分成＋加節
+        </div>
+
+        <div class="card-bottom">
+          <span>按本月排班及估算設定</span>
+          <span id="workdayCount"></span>
+        </div>
+      </article>
+
+      <article class="income-card actual">
+        <div class="card-top">
+          <div>
+            <div class="english">Real Gross Income</div>
+            <div class="chinese">本月實際總收入</div>
+          </div>
+          <div class="card-symbol" aria-hidden="true">✓</div>
+        </div>
+
+        <div class="amount">
+          <span class="currency">HK$</span>
+          <span class="number" id="actualTotal"></span>
+        </div>
+
+        <div class="card-caption">
+          已完成工作嘅已確認收入 · 未扣開支 · 包括未收款
+        </div>
+
+        <div class="card-bottom">
+          <span>截至示範日期 10月4日</span>
+          <span class="pending-text">1 日分成待填</span>
+        </div>
+      </article>
+    </section>
+
+    <div class="notice">
+      <span aria-hidden="true">ⓘ</span>
+      <span>
+        <strong>實際收入尚未完整：</strong>
+        10月4日已計入確認時薪，但診金及小手術分成仍待填。
+        未填部分不作 $0，亦不以估算代替。
+      </span>
+    </div>
+
+    <div class="workspace">
+      <section class="panel calendar-panel">
+        <div class="section-heading">
+          <h2>本月更表</h2>
+          <div class="legend">
+            <span><i class="dot green"></i>已確認</span>
+            <span><i class="dot amber"></i>待填</span>
+            <span><i class="dot blue"></i>預計</span>
+          </div>
+        </div>
+
+        <div class="weekdays" aria-hidden="true">
+          <span>一</span><span>二</span><span>三</span>
+          <span>四</span><span>五</span><span>六</span><span>日</span>
+        </div>
+
+        <div class="calendar" id="calendar" aria-label="2026年10月更表"></div>
+
+        <p class="calendar-foot">
+          點選日期查看收入明細。綠色顯示實際收入，藍色顯示預計收入；
+          金額後有 * 代表只包含已確認部分。
+        </p>
+      </section>
+
+      <aside class="panel detail-panel" id="dayDetail" aria-live="polite"></aside>
+    </div>
+
+    <details class="panel">
+      <summary>查看 Real Gross Income 組成</summary>
+      <div class="breakdown" id="breakdown"></div>
+    </details>
+
+    <footer>
+      獨立介面預覽 · 所有診所及金額均為虛構 · 未連接資料庫
+    </footer>
+  </main>
+
+  <script>
+    // 純 UI 示範資料；不是正式計糧邏輯。
+    // null 表示待填，0 表示已確認為零。
+    const referenceDay = 4;
+    let selectedDay = referenceDay;
+
+    const money = value =>
+      "HK$" + value.toLocaleString("en-HK");
+
+    const data = {
+      1: {
+        clinic: "診所 A",
+        state: "completed",
+        estimate: 3000,
+        base: 2000,
+        consult: 800,
+        procedure: 200,
+        extra: 0
+      },
+      2: {
+        clinic: "診所 B",
+        state: "completed",
+        estimate: 3400,
+        base: 2000,
+        consult: 800,
+        procedure: 200,
+        extra: 400
+      },
+      4: {
+        clinic: "診所 A",
+        state: "pending",
+        estimate: 3000,
+        base: 2000,
+        consult: null,
+        procedure: null,
+        extra: 0
+      }
+    };
+
+    // 本月未來排班：僅供預覽。
+    [5, 6, 8, 9, 12, 13, 15, 16, 19, 20, 22, 23, 26, 27, 29, 30]
+      .forEach((day, index) => {
+        data[day] = {
+          clinic: index % 2 === 0 ? "診所 A" : "診所 B",
+          state: "future",
+          estimate: 3000,
+          base: 2000,
+          consult: 800,
+          procedure: 200,
+          extra: 0
+        };
+      });
+
+    const fields = [
+      ["base", "時薪／固定收入"],
+      ["consult", "診金分成"],
+      ["procedure", "小手術分成"],
+      ["extra", "加節收入"]
+    ];
+
+    // 只加總已提供的數字；缺漏仍保留 null 並另作提示。
+    function confirmedAmount(entry) {
+      return fields.reduce((sum, [key]) =>
+        sum + (typeof entry[key] === "number" ? entry[key] : 0), 0);
+    }
+
+    const entries = Object.values(data);
+    const actualEntries = entries.filter(entry => entry.state !== "future");
+
+    const estimatedTotal = entries.reduce((sum, entry) => sum + entry.estimate, 0);
+    const actualTotal = actualEntries.reduce((sum, entry) => sum + confirmedAmount(entry), 0);
+
+    document.getElementById("estimatedTotal").textContent =
+      estimatedTotal.toLocaleString("en-HK");
+
+    document.getElementById("actualTotal").textContent =
+      actualTotal.toLocaleString("en-HK");
+
+    document.getElementById("workdayCount").textContent =
+      entries.length + " 個排班日";
+
+    document.getElementById("breakdown").innerHTML = fields.map(([key, label]) => {
+      const total = actualEntries.reduce((sum, entry) =>
+        sum + (typeof entry[key] === "number" ? entry[key] : 0), 0);
+
+      const hasMissing = actualEntries.some(entry => entry[key] === null);
+
+      return `
+        <div>
+          <span>${label}${hasMissing ? " · 部分待填" : ""}</span>
+          <strong>${money(total)}</strong>
+        </div>
+      `;
+    }).join("");
+
+    function renderCalendar() {
+      const calendar = document.getElementById("calendar");
+      calendar.innerHTML = "";
+
+      // JS 星期日為 0；轉成星期一為首日。
+      const offset = (new Date(2026, 9, 1).getDay() + 6) % 7;
+
+      for (let i = 0; i < offset; i++) {
+        const empty = document.createElement("div");
+        empty.setAttribute("aria-hidden", "true");
+        calendar.appendChild(empty);
+      }
+
+      for (let day = 1; day <= 31; day++) {
+        const entry = data[day];
+        const button = document.createElement("button");
+
+        const statusClass = entry
+          ? entry.state === "future" ? "has-work" : entry.state
+          : "";
+
+        button.type = "button";
+        button.className =
+          `day ${statusClass} ${day === selectedDay ? "selected" : ""}`;
+
+        button.setAttribute("aria-pressed", String(day === selectedDay));
+
+        let value = "";
+        let description = "沒有排班";
+
+        if (entry) {
+          value = entry.state === "future"
+            ? money(entry.estimate)
+            : money(confirmedAmount(entry)) + (entry.state === "pending" ? "*" : "");
+
+          description = entry.clinic + "，" +
+            (entry.state === "future" ? "預計收入 " : "已確認收入 ") +
+            value + (entry.state === "pending" ? "，分成待填" : "");
+        }
+
+        button.setAttribute("aria-label", `10月${day}日，${description}`);
+
+        button.innerHTML = `
+          <span class="day-number">
+            ${day}
+            ${day === referenceDay ? '<span class="today-mark">今日</span>' : ""}
+          </span>
+          ${entry ? `<span class="clinic-name">${entry.clinic}</span>` : ""}
+          ${entry ? `<span class="day-value">${value}</span>` : ""}
+        `;
+
+        button.addEventListener("click", () => selectDay(day));
+        calendar.appendChild(button);
+      }
+    }
+
+    function renderDetail() {
+      const entry = data[selectedDay];
+      const weekday = ["日", "一", "二", "三", "四", "五", "六"][
+        new Date(2026, 9, selectedDay).getDay()
+      ];
+
+      const status = !entry ? "rest" : entry.state;
+      const badgeText = {
+        rest: "無排班",
+        completed: "已確認",
+        pending: "分成待填",
+        future: "預計"
+      }[status];
+
+      const title = `10月${selectedDay}日`;
+      let content = "";
+
+      if (!entry) {
+        content = `
+          <div class="detail-note">
+            呢日未有排班，亦未有收入記錄。
+          </div>
+        `;
+      } else {
+        const future = entry.state === "future";
+        const incomplete = entry.state === "pending";
+
+        const amountLabel = future
+          ? "當日預計收入"
+          : incomplete ? "當日實際收入 · 已確認部分" : "當日實際總收入";
+
+        const note = future
+          ? "呢日尚未完成工作。金額只計入 Estimated Income，唔會計入 Real Gross Income。"
+          : incomplete
+            ? "已計入確認時薪。兩項分成仍待填，唔代表零收入；補齊後實際總收入先會完整。"
+            : "以上係你本人已賺取嘅收入，未扣開支；無論診所是否已付款，都計入實際總收入。";
+
+        content = `
+          <div class="label">${amountLabel}</div>
+          <div class="detail-amount">
+            ${money(future ? entry.estimate : confirmedAmount(entry))}
+          </div>
+
+          <div class="rows">
+            ${fields.map(([key, label]) => `
+              <div class="row">
+                <span>${label}${future && (key === "consult" || key === "procedure") ? "（估算）" : ""}</span>
+                <strong class="${entry[key] === null ? "missing" : ""}">
+                  ${entry[key] === null ? "待填" : money(entry[key])}
+                </strong>
+              </div>
+            `).join("")}
+          </div>
+
+          <div class="detail-note">${note}</div>
+        `;
+      }
+
+      document.getElementById("dayDetail").innerHTML = `
+        <div class="detail-top">
+          <h2>${title}</h2>
+          <span class="badge ${status}">${badgeText}</span>
+        </div>
+        <p class="detail-subtitle">
+          星期${weekday}${entry ? " · " + entry.clinic : ""}
+        </p>
+        ${content}
+      `;
+    }
+
+    function selectDay(day) {
+      selectedDay = day;
+
+      // 不重建按鈕，保留鍵盤焦點。
+      document.querySelectorAll("#calendar .day").forEach((button, index) => {
+        const selected = index + 1 === day;
+        button.classList.toggle("selected", selected);
+        button.setAttribute("aria-pressed", String(selected));
+      });
+
+      renderDetail();
+    }
+
+    document.getElementById("todayButton").addEventListener("click", () => {
+      selectDay(referenceDay);
+    });
+
+    renderCalendar();
+    renderDetail();
+  </script>
+</body>
+</html>
