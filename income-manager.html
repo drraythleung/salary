@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#173e37">
+<title>診金預算及 Invoice 管理</title>
+<style>
+:root{
+  --bg:#f4f7fa;--paper:#fff;--ink:#172b3a;--muted:#6f818e;
+  --line:#e3eaf0;--green:#197563;--dark:#173e37;
+  --blue:#3576c4;--amber:#946317;--red:#b44848;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;
+}
+button,input,select{font:inherit}
+button{cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+button:focus-visible,a:focus-visible,summary:focus-visible{
+  outline:3px solid #87baf0;outline-offset:3px
+}
+input:focus,select:focus{outline:2px solid #86bdb0;outline-offset:1px}
+header{background:white;border-bottom:1px solid var(--line)}
+.header-inner{
+  max-width:1240px;margin:auto;padding:19px 24px;
+  display:flex;justify-content:space-between;align-items:center;gap:12px
+}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{
+  width:42px;height:42px;display:grid;place-items:center;
+  border-radius:13px;background:#e5f3ed;color:var(--green);font-size:27px
+}
+.brand strong{display:block;font-size:17px}
+.brand small{display:block;margin-top:4px;color:var(--muted);font-size:10px;letter-spacing:2px}
+.pill{background:#f0f4f6;border-radius:9px;padding:7px 10px;font-size:11px;color:var(--muted)}
+main{max-width:1240px;margin:auto;padding:28px 24px 45px}
+.toolbar,.section-head,.actions,.month-control{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap
+}
+.toolbar,.section-head{justify-content:space-between}
+.toolbar{margin-bottom:23px}
+.eyebrow{color:var(--muted);font-size:10px;letter-spacing:2px;font-weight:700}
+h1{margin:7px 0;font-size:27px}
+h2{font-size:17px;margin:0}
+.sub{font-size:12px;color:var(--muted);line-height:1.7}
+.btn{
+  padding:10px 14px;background:white;border:1px solid var(--line);
+  color:var(--ink);border-radius:10px;font-size:12px;font-weight:600
+}
+.btn.primary{background:var(--green);border-color:var(--green);color:white}
+.btn.danger{color:var(--red)}
+.btn.small{padding:7px 10px;font-size:11px}
+.month-control input{
+  border:1px solid var(--line);border-radius:10px;background:white;
+  padding:9px;color:var(--ink)
+}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.card{padding:26px;border-radius:20px}
+.estimated{background:#edf4fd;border:1px solid #dbe7f7}
+.actual{background:var(--dark);color:white}
+.card-name{font-weight:650;font-size:15px}
+.card-cn{font-size:12px;margin-top:5px;color:var(--muted)}
+.actual .card-cn{color:#b8d1c8}
+.money{
+  display:flex;align-items:baseline;gap:10px;margin:22px 0 12px;
+  font-variant-numeric:tabular-nums
+}
+.money small{font-size:18px;opacity:.7}
+.money strong{font-size:clamp(30px,4vw,47px);letter-spacing:-1.5px}
+.card-caption{font-size:12px;line-height:1.8;color:#647b94}
+.actual .card-caption{color:#c3d9d0}
+.card-foot{
+  margin-top:19px;padding-top:14px;border-top:1px solid #d6e3f2;
+  display:flex;justify-content:space-between;gap:12px;font-size:11px;line-height:1.7
+}
+.actual .card-foot{border-color:#ffffff25}
+.amber{color:#ffe0a1}
+.notice{
+  padding:13px 16px;border-radius:12px;margin:15px 0 21px;
+  background:#fff8e9;border:1px solid #f0e1c2;color:#816333;
+  font-size:12px;line-height:1.8
+}
+.notice.ok{background:#eaf5ef;border-color:#d8ebdf;color:#41715c}
+.tabs{display:flex;gap:7px;margin-bottom:16px}
+.tab{border:0;background:transparent;color:var(--muted);border-radius:10px;padding:10px 17px}
+.tab.active{background:var(--dark);color:white}
+.panel{background:white;border:1px solid var(--line);border-radius:18px;padding:22px}
+.section-head{margin-bottom:18px}
+.table-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse;white-space:nowrap;text-align:left}
+th{font-size:11px;font-weight:500;color:var(--muted);background:#f8fafb;padding:12px}
+td{padding:15px 12px;border-bottom:1px solid #eef2f5;font-size:12px}
+tr:last-child td{border-bottom:0}
+td strong{display:block;font-weight:650}
+td small{display:block;color:var(--muted);font-size:10px;margin-top:5px}
+.badge{display:inline-block;padding:5px 8px;border-radius:7px;font-size:10px}
+.badge.green{background:#e7f5ed;color:var(--green)}
+.badge.amber{background:#fff3db;color:var(--amber)}
+.badge.blue{background:#edf4fd;color:var(--blue)}
+.badge.gray{background:#eef2f5;color:var(--muted)}
+.empty{padding:35px;text-align:center;color:var(--muted);font-size:13px}
+.invoice-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:19px}
+.stat{background:#f6f9fa;border-radius:12px;padding:16px}
+.stat span{font-size:11px;color:var(--muted)}
+.stat strong{display:block;margin-top:8px;font-size:23px}
+.explanation{font-size:12px;line-height:1.9;color:var(--muted)}
+details{margin-top:18px}
+summary{cursor:pointer;font-size:13px;font-weight:600}
+.breakdown{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:20px}
+.breakdown span{font-size:11px;color:var(--muted)}
+.breakdown strong{display:block;font-size:20px;margin-top:8px}
+footer{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-top:25px;flex-wrap:wrap}
+footer p{color:var(--muted);font-size:11px;line-height:1.8;margin:0}
+dialog{
+  width:min(740px,calc(100% - 24px));max-height:90dvh;
+  border:1px solid var(--line);border-radius:20px;padding:0;color:var(--ink);
+  box-shadow:0 20px 80px #102c3433
+}
+dialog::backdrop{background:#172b3a77}
+.dialog-head{
+  padding:21px 24px;border-bottom:1px solid var(--line);
+  display:flex;justify-content:space-between;align-items:center;gap:12px
+}
+.dialog-body{padding:23px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+label{display:block;font-size:12px;color:#506575}
+label input,label select{
+  display:block;width:100%;padding:11px;margin-top:7px;
+  border:1px solid #dbe4e9;border-radius:9px;background:white;color:var(--ink)
+}
+label input:disabled,label select:disabled{background:#f0f3f5;color:var(--muted)}
+.group-title{margin:24px 0 13px;font-size:13px}
+.group-title small{font-weight:400;color:var(--muted);margin-left:6px}
+.form-note{font-size:11px;line-height:1.8;color:var(--muted)}
+.dialog-foot{
+  padding:17px 24px;border-top:1px solid var(--line);
+  display:flex;justify-content:flex-end;gap:10px
+}
+#toast{
+  position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+  background:#173e37;color:white;padding:13px 20px;border-radius:12px;
+  z-index:100;font-size:13px;max-width:90%;box-shadow:0 5px 25px #0002
+}
+#storageWarning{margin-top:0}
+[hidden]{display:none!important}
+@media(max-width:700px){
+  main{padding:23px 15px}.header-inner{padding:16px}
+  .cards{gap:12px}.card{padding:20px}
+  .card-foot{flex-direction:column;gap:4px}
+  .panel{padding:16px}.breakdown{grid-template-columns:1fr 1fr}
+  .invoice-stats{grid-template-columns:1fr}
+  .stat{display:flex;justify-content:space-between;align-items:center}
+  .stat strong{margin:0;font-size:21px}
+}
+@media(max-width:470px){
+  .cards{grid-template-columns:1fr}
+  .money{margin:16px 0 9px}.money strong{font-size:40px}
+  .card-foot{flex-direction:row}
+  .form-grid{grid-template-columns:1fr}
+  .dialog-body{padding:19px}.dialog-head{padding:18px}
+  .toolbar{align-items:flex-start}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">＋</div>
+      <div><strong>診金預算</strong><small>CLINIC INCOME</small></div>
+    </div>
+    <span class="pill">本機試用版 · 未同步</span>
+  </div>
+</header>
+
+<main>
+  <div id="storageWarning" class="notice" role="alert" hidden></div>
+
+  <div class="toolbar">
+    <div>
+      <div class="eyebrow">MONTHLY OVERVIEW</div>
+      <h1 id="monthTitle"></h1>
+      <div class="sub">預計收入、實際總收入、收款狀態，分開管理。</div>
+    </div>
+    <div class="actions">
+      <div class="month-control">
+        <button class="btn" id="prevMonth" aria-label="上一個月">‹</button>
+        <input type="month" id="month" aria-label="選擇月份">
+        <button class="btn" id="nextMonth" aria-label="下一個月">›</button>
+      </div>
+      <button class="btn primary" id="addRecord">＋ 新增排班／收入</button>
+    </div>
+  </div>
+
+  <section class="cards" aria-label="收入總覽">
+    <article class="card estimated">
+      <div class="card-name">Estimated Income</div>
+      <div class="card-cn">本月預計收入</div>
+      <div class="money"><small>HK$</small><strong id="estimatedTotal">0</strong></div>
+      <div class="card-caption">全月預計時薪／固定收入＋估算分成＋預計加節</div>
+      <div class="card-foot">
+        <span>預算獨立保留，不被實際數字覆蓋</span>
+        <span id="recordCount"></span>
+      </div>
+    </article>
+
+    <article class="card actual">
+      <div class="card-name">Real Gross Income</div>
+      <div class="card-cn">本月實際總收入</div>
+      <div class="money"><small>HK$</small><strong id="actualTotal">0</strong></div>
+      <div class="card-caption">本人已完成工作嘅已確認收入 · 未扣開支 · 包括未收款</div>
+      <div class="card-foot">
+        <span>不包括未完成排班及未確認金額</span>
+        <span id="pendingCount" class="amber"></span>
+      </div>
+    </article>
+  </section>
+
+  <div id="incomeNotice" class="notice"></div>
+
+  <nav class="tabs" aria-label="管理頁面">
+    <button class="tab active" data-tab="records" aria-pressed="true">更表及收入</button>
+    <button class="tab" data-tab="invoices" aria-pressed="false">Invoice 管理</button>
+  </nav>
+
+  <section id="recordsPanel" class="panel">
+    <div class="section-head">
+      <h2>本月收入記錄</h2>
+      <span class="sub">一筆記錄可代表一節更；同日可新增多節。</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>日期／診所</th><th>工作狀態</th><th>預計收入</th>
+            <th>實際總收入</th><th>Invoice</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="recordRows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="invoicesPanel" class="panel" hidden>
+    <div class="section-head">
+      <h2>Invoice 管理</h2>
+      <button class="btn primary" id="newInvoice">＋ 按診所產生 Invoice</button>
+    </div>
+    <div class="invoice-stats" id="invoiceStats"></div>
+    <p class="explanation">
+      以下按<strong>收入所屬月份</strong>顯示。只會將已完成、金額完整、
+      未開單嘅記錄加入 Invoice。標記已收款唔會改變實際總收入。
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Invoice／診所</th><th>金額</th><th>收款狀態</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="invoiceRows"></tbody>
+      </table>
+    </div>
+    <p class="form-note">
+      此版以整張 Invoice 全額已收／未收管理，暫不支援部分收款、
+      退款或正式稅務單據。已開單記錄鎖定；如需更正，先取消未收款 Invoice。
+    </p>
+  </section>
+
+  <details class="panel">
+    <summary>查看實際總收入組成</summary>
+    <div class="breakdown" id="breakdown"></div>
+  </details>
+
+  <footer>
+    <p>
+      資料只保存在目前瀏覽器。清除網站資料或更換裝置可能會遺失。<br>
+      示範資料含虛構診所；日期依裝置本地日期建立。
+    </p>
+    <div class="actions">
+      <button class="btn small" id="backup">下載備份</button>
+      <button class="btn small" id="restore">還原備份</button>
+      <button class="btn small danger" id="clearData">清空資料</button>
+    </div>
+  </footer>
+</main>
+
+<!-- 收入記錄表單 -->
+<dialog id="recordDialog" aria-labelledby="recordDialogTitle">
+  <form id="recordForm">
+    <div class="dialog-head">
+      <h2 id="recordDialogTitle">新增排班／收入</h2>
+      <button type="button" class="btn small" data-close="recordDialog">關閉</button>
+    </div>
+    <div class="dialog-body">
+      <div class="form-grid">
+        <label>工作日期
+          <input type="date" id="recordDate" required>
+        </label>
+        <label>診所名稱
+          <input id="clinic" maxlength="80" list="clinicList" required placeholder="例如：診所 A">
+          <datalist id="clinicList"></datalist>
+        </label>
+        <label>工作狀態
+          <select id="workStatus">
+            <option value="planned">未完成／預計</option>
+            <option value="completed">已完成</option>
+          </select>
+        </label>
+        <label>備註／更節名稱
+          <input id="recordNote" maxlength="120" placeholder="例如：上午更 09:00–13:00">
+        </label>
+      </div>
+
+      <h3 class="group-title">Estimated Income <small>以下填你本人預計所得</small></h3>
+      <div id="estimateFields" class="form-grid"></div>
+
+      <h3 class="group-title">Real Gross Income <small>以下填你本人實際所得</small></h3>
+      <p class="form-note">
+        時薪項目填「時薪 × 實際工時」後嘅金額；
+        分成項目填你分到嘅金額，唔係診所營業額。<br>
+        <strong>留空＝待確認；輸入 0＝已確認冇收入。</strong>
+        未完成排班唔會計入實際總收入。
+      </p>
+      <div id="actualFields" class="form-grid"></div>
+      <div class="notice" id="formSummary" aria-live="polite"></div>
+    </div>
+    <div class="dialog-foot">
+      <button type="button" class="btn" data-close="recordDialog">取消</button>
+      <button type="submit" class="btn primary">儲存記錄</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- 產生 Invoice -->
+<dialog id="invoiceDialog" aria-labelledby="invoiceDialogTitle">
+  <form id="invoiceForm">
+    <div class="dialog-head">
+      <h2 id="invoiceDialogTitle">產生 Invoice</h2>
+      <button type="button" class="btn small" data-close="invoiceDialog">關閉</button>
+    </div>
+    <div class="dialog-body">
+      <label>選擇診所
+        <select id="invoiceClinic" required></select>
+      </label>
+      <div class="notice" id="invoicePreview" aria-live="polite"></div>
+      <p class="form-note">
+        將本月此診所所有「已完成、金額完整、未開單」記錄合併成一張 Invoice。
+        待填記錄會略過，不會以估算金額開單。
+      </p>
+    </div>
+    <div class="dialog-foot">
+      <button type="button" class="btn" data-close="invoiceDialog">取消</button>
+      <button type="submit" class="btn primary" id="createInvoice">確認產生</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Invoice 明細 -->
+<dialog id="invoiceDetail" aria-labelledby="invoiceDetailTitle">
+  <div class="dialog-head">
+    <h2 id="invoiceDetailTitle">Invoice 明細</h2>
+    <button class="btn small" data-close="invoiceDetail">關閉</button>
+  </div>
+  <div class="dialog-body" id="invoiceDetailBody"></div>
+</dialog>
+
+<input type="file" id="backupFile" accept=".json,application/json" hidden>
+<div id="toast" role="status" hidden></div>
+
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+const STORE = "clinic-income-local-v1";
+const fields = [
+  ["base", "時薪／固定收入"],
+  ["consult", "診金分成"],
+  ["procedure", "小手術分成"],
+  ["extra", "加節收入"]
+];
+const keys = fields.map(([key]) => key);
+
+const localDate = (date = new Date()) =>
+  `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+
+const today = () => localDate();
+const uid = () => crypto.randomUUID();
+const esc = value => String(value).replace(/[&<>"']/g, ch => ({
+  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+}[ch]));
+
+const round = value => Math.round((value + Number.EPSILON) * 100) / 100;
+const num = value => value.toLocaleString("en-HK", {
+  minimumFractionDigits:0, maximumFractionDigits:2
+});
+const cash = value => "HK$" + num(value);
+
+// null 仍然保留為待填；这里只計算「已確認部分」的小計。
+const total = amounts => round(keys.reduce((sum,key) =>
+  sum + (typeof amounts[key] === "number" ? amounts[key] : 0), 0));
+
+const complete = record =>
+  record.status === "completed" &&
+  keys.every(key => typeof record.actual[key] === "number");
+
+const earned = record =>
+  record.status === "completed" ? total(record.actual) : 0;
+
+const sum = (items, fn) => round(items.reduce((value,item) => value + fn(item),0));
+
+function amounts(base,consult,procedure,extra){
+  return {base,consult,procedure,extra};
+}
+
+function demoData(){
+  const date = today();
+  const next = new Date();
+  next.setDate(next.getDate()+1);
+
+  return {
+    version:1,
+    records:[
+      {
+        id:uid(),date,clinic:"示範診所 A",note:"上午更 · 示範",
+        status:"completed",
+        estimate:amounts(2000,800,200,0),
+        actual:amounts(2000,900,200,0)
+      },
+      {
+        id:uid(),date,clinic:"示範診所 B",note:"下午更 · 分成待填示範",
+        status:"completed",
+        estimate:amounts(1600,600,100,0),
+        actual:amounts(1600,null,null,0)
+      },
+      {
+        id:uid(),date:localDate(next),clinic:"示範診所 A",note:"未完成排班示範",
+        status:"planned",
+        estimate:amounts(2000,800,200,0),
+        actual:amounts(null,null,null,null)
+      }
+    ],
+    invoices:[]
+  };
+}
+
+function validDate(value){
+  if(typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(value+"T12:00:00");
+  return !isNaN(date) && localDate(date) === value;
+}
+
+function isMoney(value){
+  return typeof value === "number" && Number.isFinite(value) &&
+    value >= 0 && value <= 100000000 &&
+    Math.abs(value * 100 - Math.round(value * 100)) < 0.0001;
+}
+
+function validAmounts(value, allowNull){
+  return value && keys.every(key =>
+    (allowNull && value[key] === null) || isMoney(value[key]));
+}
+
+// 還原前驗證結構、連結及 Invoice 總額。
+function validateState(value){
+  const fail = () => { throw new Error("備份格式、金額或 Invoice 連結不正確。"); };
+
+  if(!value || value.version !== 1 ||
+     !Array.isArray(value.records) || !Array.isArray(value.invoices)) fail();
+
+  if(value.records.length > 20000 || value.invoices.length > 10000) fail();
+
+  const recordIDs = new Set();
+  for(const r of value.records){
+    if(!r || typeof r.id !== "string" || !r.id || recordIDs.has(r.id) ||
+       !validDate(r.date) ||
+       typeof r.clinic !== "string" || !r.clinic.trim() || r.clinic.length > 80 ||
+       typeof r.note !== "string" || r.note.length > 120 ||
+       !["planned","completed"].includes(r.status) ||
+       !validAmounts(r.estimate,false) || !validAmounts(r.actual,true)) fail();
+
+    if(r.status === "completed" && r.date > today()) fail();
+    if(r.status === "planned" && keys.some(key => r.actual[key] !== null)) fail();
+    recordIDs.add(r.id);
+  }
+
+  const invoiceIDs = new Set(), numbers = new Set(), linked = new Set();
+  for(const inv of value.invoices){
+    if(!inv || typeof inv.id !== "string" || !inv.id || invoiceIDs.has(inv.id) ||
+       typeof inv.number !== "string" || !inv.number || inv.number.length > 80 ||
+       numbers.has(inv.number) ||
+       typeof inv.clinic !== "string" ||
+       !/^\d{4}-(0[1-9]|1[0-2])$/.test(inv.month) ||
+       !validDate(inv.issued) ||
+       !["unpaid","paid"].includes(inv.status) ||
+       !(inv.paidOn === null || validDate(inv.paidOn)) ||
+       (inv.status === "paid" && inv.paidOn === null) ||
+       (inv.status === "unpaid" && inv.paidOn !== null) ||
+       !isMoney(inv.amount) || inv.amount === 0 ||
+       !Array.isArray(inv.recordIds) || !inv.recordIds.length) fail();
+
+    const included = [];
+    for(const id of inv.recordIds){
+      const r = value.records.find(item => item.id === id);
+      if(!r || linked.has(id) || !complete(r) ||
+         r.clinic !== inv.clinic || r.date.slice(0,7) !== inv.month) fail();
+      linked.add(id);
+      included.push(r);
+    }
+
+    if(Math.abs(sum(included,earned) - inv.amount) > .001) fail();
+    invoiceIDs.add(inv.id);
+    numbers.add(inv.number);
+  }
+  return value;
+}
+
+let persistenceBlocked = false;
+let state;
+
+function storageWarning(message){
+  $("storageWarning").textContent = message;
+  $("storageWarning").hidden = false;
+}
+
+try{
+  const saved = localStorage.getItem(STORE);
+  state = saved ? validateState(JSON.parse(saved)) : demoData();
+  if(!saved) localStorage.setItem(STORE,JSON.stringify(state));
+}catch(error){
+  state = {version:1,records:[],invoices:[]};
+  persistenceBlocked = true;
+  storageWarning(
+    "無法讀取或初始化本機資料。為免覆蓋原資料，已停止自動儲存。" +
+    "你仍可試用，但關閉前必須下載備份。還原有效備份可嘗試恢復儲存。"
+  );
+}
+
+function save(){
+  if(persistenceBlocked){
+    storageWarning("目前未自動儲存。資料只在此頁面暫存，請下載備份後才關閉。");
+    return;
+  }
+  try{
+    localStorage.setItem(STORE,JSON.stringify(state));
+    $("storageWarning").hidden = true;
+  }catch(error){
+    storageWarning("本機儲存失敗！目前修改只在此頁面暫存，請立即下載備份。");
+  }
+}
+
+let toastTimer;
+function toast(message){
+  $("toast").textContent = message;
+  $("toast").hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $("toast").hidden = true, 4200);
+}
+
+$("month").value = today().slice(0,7);
+const monthRecords = () => state.records
+  .filter(r => r.date.slice(0,7) === $("month").value)
+  .sort((a,b) => a.date.localeCompare(b.date));
+
+const invoiceFor = recordID =>
+  state.invoices.find(inv => inv.recordIds.includes(recordID));
+
+function render(){
+  const month = $("month").value;
+  const records = monthRecords();
+  const actual = records.filter(r => r.status === "completed");
+  const pending = actual.filter(r => !complete(r));
+  const pendingDays = new Set(pending.map(r => r.date)).size;
+  const [year,mon] = month.split("-");
+
+  $("monthTitle").textContent = `${year}年${Number(mon)}月`;
+  $("estimatedTotal").textContent = num(sum(records,r => total(r.estimate)));
+  $("actualTotal").textContent = num(sum(actual,earned));
+  $("recordCount").textContent = `${records.length} 節更`;
+  $("pendingCount").textContent = pending.length
+    ? `${pendingDays} 日／${pending.length} 筆待填` : "記錄已完整";
+
+  $("incomeNotice").className = "notice" + (pending.length ? "" : " ok");
+  $("incomeNotice").textContent = pending.length
+    ? `實際總收入未完整：${pending.length} 筆已完成記錄仍有待填金額。上方只顯示已確認部分，未填不當作 $0，亦不使用估算代替。`
+    : "實際總收入只包含已完成工作。未來排班只影響預計收入；Invoice 已收或未收都唔會改變已賺取收入。";
+
+  $("recordRows").innerHTML = records.length ? records.map(r => {
+    const invoice = invoiceFor(r.id);
+    const status = r.status === "planned"
+      ? '<span class="badge blue">未完成</span>'
+      : complete(r)
+        ? '<span class="badge green">已完成 · 完整</span>'
+        : '<span class="badge amber">已完成 · 待填</span>';
+
+    const actualCell = r.status === "planned"
+      ? '<span class="sub">— 尚未完成</span>'
+      : `<strong>${cash(earned(r))}${complete(r) ? "" : "*"}</strong>
+         ${complete(r) ? "" : "<small>只含已確認部分</small>"}`;
+
+    return `<tr>
+      <td><strong>${esc(r.date)} · ${esc(r.clinic)}</strong><small>${esc(r.note)}</small></td>
+      <td>${status}</td>
+      <td>${cash(total(r.estimate))}</td>
+      <td>${actualCell}</td>
+      <td>${invoice
+        ? `<span class="badge ${invoice.status === "paid" ? "green" : "amber"}">${invoice.status === "paid" ? "已收款" : "未收款"}</span><small>${esc(invoice.number)}</small>`
+        : '<span class="badge gray">未開單</span>'}</td>
+      <td><div class="actions">
+        <button class="btn small" data-action="edit" data-id="${esc(r.id)}"
+          ${invoice ? "disabled" : ""}>${invoice ? "已鎖定" : "修改"}</button>
+        <button class="btn small danger" data-action="delete" data-id="${esc(r.id)}"
+          ${invoice ? "disabled" : ""}>刪除</button>
+      </div></td>
+    </tr>`;
+  }).join("") : '<tr><td colspan="6" class="empty">呢個月未有記錄，按「新增排班／收入」開始。</td></tr>';
+
+  $("breakdown").innerHTML = fields.map(([key,label]) => {
+    const missing = actual.some(r => r.actual[key] === null);
+    const amount = sum(actual,r => r.actual[key] === null ? 0 : r.actual[key]);
+    return `<div><span>${label}${missing ? " · 部分待填" : ""}</span><strong>${cash(amount)}</strong></div>`;
+  }).join("");
+
+  $("clinicList").innerHTML = [...new Set(state.records.map(r => r.clinic))]
+    .map(name => `<option value="${esc(name)}"></option>`).join("");
+
+  renderInvoices();
+}
+
+function renderInvoices(){
+  const month = $("month").value;
+  const invoices = state.invoices.filter(inv => inv.month === month);
+  const unpaid = sum(invoices.filter(inv => inv.status === "unpaid"),inv => inv.amount);
+  const paid = sum(invoices.filter(inv => inv.status === "paid"),inv => inv.amount);
+
+  const unbilled = sum(monthRecords().filter(r =>
+    r.status === "completed" && !invoiceFor(r.id)),earned);
+
+  $("invoiceStats").innerHTML = [
+    ["未收款 Invoice",unpaid],
+    ["已收款 Invoice",paid],
+    ["未開單收入（已確認部分）",unbilled]
+  ].map(([label,value]) =>
+    `<div class="stat"><span>${label}</span><strong>${cash(value)}</strong></div>`
+  ).join("");
+
+  $("invoiceRows").innerHTML = invoices.length ? invoices.map(inv => `<tr>
+    <td><strong>${esc(inv.number)}</strong>
+      <small>${esc(inv.clinic)} · 開單 ${esc(inv.issued)}</small></td>
+    <td><strong>${cash(inv.amount)}</strong><small>${inv.recordIds.length} 筆收入</small></td>
+    <td><span class="badge ${inv.status === "paid" ? "green" : "amber"}">
+      ${inv.status === "paid" ? "已收款" : "未收款"}</span>
+      ${inv.paidOn ? `<small>標記日期 ${esc(inv.paidOn)}</small>` : ""}</td>
+    <td><div class="actions">
+      <button class="btn small" data-action="view" data-id="${esc(inv.id)}">明細</button>
+      <button class="btn small" data-action="toggle" data-id="${esc(inv.id)}">
+        ${inv.status === "paid" ? "改為未收" : "標記已收"}
+      </button>
+      <button class="btn small danger" data-action="cancel" data-id="${esc(inv.id)}"
+        ${inv.status === "paid" ? "disabled" : ""}>取消單據</button>
+    </div></td>
+  </tr>`).join("") : '<tr><td colspan="4" class="empty">呢個月暫時未有 Invoice。</td></tr>';
+}
+
+document.querySelectorAll("[data-tab]").forEach(button => {
+  button.addEventListener("click",() => {
+    document.querySelectorAll("[data-tab]").forEach(tab => {
+      const active = tab === button;
+      tab.classList.toggle("active",active);
+      tab.setAttribute("aria-pressed",String(active));
+    });
+    $("recordsPanel").hidden = button.dataset.tab !== "records";
+    $("invoicesPanel").hidden = button.dataset.tab !== "invoices";
+  });
+});
+
+$("month").addEventListener("change",() => {
+  if(!$("month").value) $("month").value = today().slice(0,7);
+  render();
+});
+
+function moveMonth(offset){
+  const [year,month] = $("month").value.split("-").map(Number);
+  const date = new Date(year,month-1+offset,1,12);
+  $("month").value = localDate(date).slice(0,7);
+  render();
+}
+$("prevMonth").onclick = () => moveMonth(-1);
+$("nextMonth").onclick = () => moveMonth(1);
+
+document.querySelectorAll("[data-close]").forEach(button => {
+  button.onclick = () => $(button.dataset.close).close();
+});
+
+// 動態建立四項預計及實際收入欄位。
+for(const [prefix,target] of [["e","estimateFields"],["a","actualFields"]]){
+  $(target).innerHTML = fields.map(([key,label]) => `
+    <label>${label}
+      <input type="number" min="0" max="100000000" step="0.01"
+        inputmode="decimal" id="${prefix}_${key}"
+        ${prefix === "e" ? "required" : ""}
+        placeholder="${prefix === "e" ? "0" : "待確認；冇收入請填 0"}">
+    </label>
+  `).join("");
+}
+
+let editingID = null;
+
+function readAmounts(prefix){
+  return Object.fromEntries(keys.map(key => {
+    const raw = $(prefix+"_"+key).value;
+    return [key,raw === "" ? null : Number(raw)];
+  }));
+}
+
+function updateFormSummary(){
+  const completed = $("workStatus").value === "completed";
+  keys.forEach(key => $("a_"+key).disabled = !completed);
+
+  const estimate = readAmounts("e");
+  const actual = readAmounts("a");
+  const missing = keys.filter(key => actual[key] === null).length;
+
+  $("formSummary").textContent =
+    `預計收入：${cash(total(estimate))}。` +
+    (completed
+      ? `實際已確認部分：${cash(total(actual))}。${missing ? `尚有 ${missing} 項待確認。` : "所有金額已填妥。"}`
+      : "工作未完成：不計入實際總收入，實際欄位亦不會儲存。");
+}
+
+function openRecord(id = null){
+  const record = id ? state.records.find(r => r.id === id) : null;
+  if(id && (!record || invoiceFor(id))) return;
+
+  editingID = id;
+  $("recordForm").reset();
+  $("recordDialogTitle").textContent = id ? "修改收入記錄" : "新增排班／收入";
+  $("recordDate").value = record ? record.date :
+    ($("month").value === today().slice(0,7) ? today() : $("month").value+"-01");
+  $("clinic").value = record?.clinic || "";
+  $("recordNote").value = record?.note || "";
+  $("workStatus").value = record?.status || "planned";
+
+  keys.forEach(key => {
+    $("e_"+key).value = record ? record.estimate[key] : 0;
+    $("a_"+key).value = record ? (record.actual[key] ?? "") : "";
+  });
+
+  updateFormSummary();
+  $("recordDialog").showModal();
+}
+$("addRecord").onclick = () => openRecord();
+$("recordForm").addEventListener("input",updateFormSummary);
+$("workStatus").addEventListener("change",updateFormSummary);
+
+$("recordForm").addEventListener("submit",event => {
+  event.preventDefault();
+
+  const date = $("recordDate").value;
+  const clinic = $("clinic").value.trim();
+  const status = $("workStatus").value;
+  if(!validDate(date) || !clinic){
+    toast("請填寫有效日期及診所名稱。"); return;
+  }
+  if(status === "completed" && date > today()){
+    toast("未來日期不能標記為已完成。"); return;
+  }
+  if(editingID && invoiceFor(editingID)){
+    toast("此記錄已開單，請先取消 Invoice。"); return;
+  }
+
+  const estimate = readAmounts("e");
+  const actual = status === "completed" ? readAmounts("a") :
+    amounts(null,null,null,null);
+
+  if(!validAmounts(estimate,false) || !validAmounts(actual,true)){
+    toast("金額必須為非負數，最多兩位小數。"); return;
+  }
+
+  const record = {
+    id:editingID || uid(),date,clinic,status,
+    note:$("recordNote").value.trim(),estimate,actual
+  };
+
+  if(editingID){
+    const index = state.records.findIndex(r => r.id === editingID);
+    if(index < 0) return;
+    state.records[index] = record;
+  }else{
+    state.records.push(record);
+  }
+
+  $("month").value = date.slice(0,7);
+  save();render();
+  $("recordDialog").close();
+  toast("記錄已更新；預計與實際收入已重新計算。");
+});
+
+$("recordRows").addEventListener("click",event => {
+  const button = event.target.closest("button[data-action]");
+  if(!button || button.disabled) return;
+  const id = button.dataset.id;
+  if(invoiceFor(id)) return;
+
+  if(button.dataset.action === "edit") openRecord(id);
+  if(button.dataset.action === "delete" && confirm("確定刪除此收入記錄？")){
+    state.records = state.records.filter(r => r.id !== id);
+    save();render();toast("記錄已刪除。");
+  }
+});
+
+function eligibleRecords(clinic){
+  return monthRecords().filter(r =>
+    r.clinic === clinic && complete(r) && !invoiceFor(r.id));
+}
+
+function updateInvoicePreview(){
+  const clinic = $("invoiceClinic").value;
+  const eligible = eligibleRecords(clinic);
+  const pending = monthRecords().filter(r =>
+    r.clinic === clinic && r.status === "completed" &&
+    !complete(r) && !invoiceFor(r.id));
+  const amount = sum(eligible,earned);
+
+  $("invoicePreview").textContent = clinic
+    ? `將加入 ${eligible.length} 筆記錄，合共 ${cash(amount)}。` +
+      (pending.length ? `另有 ${pending.length} 筆待填，今次不會加入。` : "")
+    : "本月沒有可開單記錄。請先完成工作，並確認所有實際收入欄位。";
+
+  $("createInvoice").disabled =
+    !eligible.length || amount <= 0 || !isMoney(amount);
+}
+
+$("newInvoice").onclick = () => {
+  const clinics = [...new Set(monthRecords().filter(r =>
+    complete(r) && !invoiceFor(r.id)).map(r => r.clinic))];
+
+  $("invoiceClinic").innerHTML = clinics.length
+    ? clinics.map(name => `<option value="${esc(name)}">${esc(name)}</option>`).join("")
+    : '<option value="">暫無可開單診所</option>';
+
+  updateInvoicePreview();
+  $("invoiceDialog").showModal();
+};
+$("invoiceClinic").onchange = updateInvoicePreview;
+
+$("invoiceForm").addEventListener("submit",event => {
+  event.preventDefault();
+  const clinic = $("invoiceClinic").value;
+  const records = eligibleRecords(clinic);
+  const amount = sum(records,earned);
+  if(!records.length || amount <= 0 || !isMoney(amount)) return;
+
+  const id = uid();
+  const number = `INV-${$("month").value.replace("-","")}-${id.slice(0,8).toUpperCase()}`;
+
+  state.invoices.push({
+    id,number,clinic,month:$("month").value,
+    issued:today(),status:"unpaid",paidOn:null,
+    recordIds:records.map(r => r.id),amount
+  });
+
+  save();render();
+  $("invoiceDialog").close();
+  toast("Invoice 已產生；相關收入記錄已鎖定。");
+});
+
+function viewInvoice(inv){
+  const records = inv.recordIds.map(id => state.records.find(r => r.id === id));
+  $("invoiceDetailTitle").textContent = inv.number;
+  $("invoiceDetailBody").innerHTML = `
+    <h2>${esc(inv.clinic)}</h2>
+    <p class="sub">
+      收入月份：${esc(inv.month)} · 開單日期：${esc(inv.issued)}<br>
+      收款狀態：${inv.status === "paid" ? "已收款" : "未收款"}
+    </p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>日期／更節</th><th>本人實際所得</th></tr></thead>
+      <tbody>${records.map(r => `<tr>
+        <td>${esc(r.date)}<small>${esc(r.note)}</small></td>
+        <td>${cash(earned(r))}</td>
+      </tr>`).join("")}</tbody>
+    </table></div>
+    <div class="breakdown">
+      ${fields.map(([key,label]) => `<div>
+        <span>${label}</span>
+        <strong>${cash(sum(records,r => r.actual[key]))}</strong>
+      </div>`).join("")}
+    </div>
+    <div class="notice ok"><strong>Invoice 合計：${cash(inv.amount)}</strong></div>
+    <p class="form-note">此為本機管理明細，未加入正式抬頭、收款資料或 PDF 版面。</p>
+  `;
+  $("invoiceDetail").showModal();
+}
+
+$("invoiceRows").addEventListener("click",event => {
+  const button = event.target.closest("button[data-action]");
+  if(!button || button.disabled) return;
+  const inv = state.invoices.find(item => item.id === button.dataset.id);
+  if(!inv) return;
+
+  const action = button.dataset.action;
+  if(action === "view"){
+    viewInvoice(inv);return;
+  }
+  if(action === "toggle"){
+    const paid = inv.status !== "paid";
+    if(!confirm(paid
+      ? `確認已收到 ${cash(inv.amount)} 全額款項？`
+      : "將此 Invoice 改回未收款？")) return;
+
+    inv.status = paid ? "paid" : "unpaid";
+    inv.paidOn = paid ? today() : null;
+    save();render();
+    toast("收款狀態已更新；實際總收入不變。");
+  }
+  if(action === "cancel"){
+    if(inv.status === "paid") return;
+    if(!confirm("取消此未收款 Invoice？收入記錄會保留並解鎖。此操作只影響本機管理資料。")) return;
+    state.invoices = state.invoices.filter(item => item.id !== inv.id);
+    save();render();toast("Invoice 已取消，收入記錄已解鎖。");
+  }
+});
+
+$("backup").onclick = () => {
+  const blob = new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `clinic-income-backup-${today()}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url),2000);
+  toast("已發出備份下載；檔案含收入資料，請妥善保存。");
+};
+
+$("restore").onclick = () => $("backupFile").click();
+
+$("backupFile").addEventListener("change",async event => {
+  const file = event.target.files[0];
+  if(!file) return;
+
+  try{
+    if(file.size > 10 * 1024 * 1024) throw new Error("檔案太大，上限 10MB。");
+    const restored = validateState(JSON.parse(await file.text()));
+
+    if(!confirm(
+      `備份包含 ${restored.records.length} 筆記錄及 ${restored.invoices.length} 張 Invoice。\n` +
+      "還原會取代目前全部資料，建議先下載現有備份。確定繼續？"
+    )) return;
+
+    state = restored;
+    persistenceBlocked = false;
+    save();render();toast("備份已載入，請留意頁面有否儲存失敗提示。");
+  }catch(error){
+    alert("未能還原：" + error.message);
+  }finally{
+    event.target.value = "";
+  }
+});
+
+$("clearData").onclick = () => {
+  if(!confirm("確定清空全部收入及 Invoice？此操作不能復原，請先下載備份。")) return;
+  state = {version:1,records:[],invoices:[]};
+  save();render();toast("本頁資料已清空。");
+};
+
+render();
+</script>
+</body>
+</html>
