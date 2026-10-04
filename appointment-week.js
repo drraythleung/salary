@@ -57,7 +57,111 @@ window.incomeAppointmentWeek = function(base) {
 
     awHours: Array.from({ length: 24 }, (_, i) => i),
     awSlots: Array.from({ length: 96 }, (_, i) => i * 15),
+awWork: [],
+    awWorkNotes: {},
+    awWorkLoading: false,
+    awWorkError: '',
+    awWorkRequest: 0,
 
+    awResetWork() {
+      // 令尚未完成的舊請求失效。
+      this.awWorkRequest += 1;
+      this.awWork = [];
+      this.awWorkNotes = {};
+      this.awWorkLoading = false;
+      this.awWorkError = '';
+    },
+
+    async awLoadWork(alive) {
+      const request = ++this.awWorkRequest;
+      const selected = this.apDate;
+      const first = weekStart(selected);
+      const last = shiftDate(first, 6);
+
+      const current = () =>
+        request === this.awWorkRequest &&
+        selected === this.apDate &&
+        alive();
+
+      this.awWorkLoading = true;
+      this.awWorkError = '';
+
+      try {
+        if (
+          typeof window.AppointmentSchedule?.calendar !== 'function'
+        ) {
+          throw new Error('Schedule calendar unavailable');
+        }
+
+        const data = await window.AppointmentSchedule.calendar(
+          db,
+          first,
+          last
+        );
+
+        if (!current()) return;
+
+        this.awWork = data.slots;
+        this.awWorkNotes = data.notes;
+      } catch {
+        if (!current()) return;
+
+        this.awWork = [];
+        this.awWorkNotes = {};
+        this.awWorkError =
+          '返工更表未能載入，唔代表當日冇更。' +
+          '請重新整理；儲存預約時仍會重新核對更表。';
+      } finally {
+        if (request === this.awWorkRequest) {
+          this.awWorkLoading = false;
+        }
+      }
+    },
+
+    awWorkMessages(date) {
+      return this.awWorkNotes[date] || [];
+    },
+
+    awWorkBands(date) {
+      const slots = this.awWork.filter(s => s.date === date);
+
+      // 不同診所若時間重疊，分欄顯示，避免互相完全遮蓋。
+      const clinicIds = [...new Set(
+        slots.map(s => String(s.clinic_id))
+      )].sort();
+
+      return slots.map(slot => {
+        const colour = this.awColour(slot.clinic_id);
+        const lane = clinicIds.indexOf(String(slot.clinic_id));
+        const count = clinicIds.length;
+
+        const label =
+          `${this.awHM(slot.start)}–${this.awHM(slot.end)}` +
+          ` · ${slot.clinic_name}`;
+
+        return {
+          ...slot,
+          label,
+          style: {
+            top: `${slot.start * 2}px`,
+            height: `${(slot.end - slot.start) * 2}px`,
+            left: `${lane * 100 / count}%`,
+            width: `${100 / count}%`,
+            '--work-bg': colour.background,
+            '--work-ink': colour.ink,
+            '--work-line': colour.line
+          }
+        };
+      });
+    },
+
+    awCreateFromWork(slot) {
+      this.awCreate(
+        slot.date,
+        this.awHM(slot.start),
+        slot.clinic_id
+      );
+    },
     awInit() {
       // 原本 apInit 仍然只執行一次。
       this.apInit();
@@ -68,6 +172,7 @@ window.incomeAppointmentWeek = function(base) {
     },
 
     apClear() {
+      this.awResetWork();
       this.$refs.awDialog?.close();
       this.awOriginal = '';
       this.awPositioned = false;
@@ -182,18 +287,33 @@ window.incomeAppointmentWeek = function(base) {
       return { background, ink, line };
     },
 
-    awLegend() {
+awLegend() {
       const seen = new Map();
+      const visibleDates = new Set(
+        this.awDays().map(day => day.date)
+      );
 
-      for (const row of this.awRows()) {
-        const id = String(row.clinic_id);
+      const add = (clinicId, clinicName) => {
+        const id = String(clinicId);
 
         if (!seen.has(id)) {
           seen.set(id, {
             id,
-            name: row.clinic_name,
+            name: clinicName,
             colour: this.awColour(id).line
           });
+        }
+      };
+
+      for (const slot of this.awWork) {
+        if (visibleDates.has(slot.date)) {
+          add(slot.clinic_id, slot.clinic_name);
+        }
+      }
+
+      for (const row of this.awRows()) {
+        if (visibleDates.has(this.awRowDate(row))) {
+          add(row.clinic_id, row.clinic_name);
         }
       }
 
@@ -338,6 +458,7 @@ window.incomeAppointmentWeek = function(base) {
      * 現在都會更新完整一週。
      */
     async apFetchDay(alive, user) {
+      this.awResetWork();
       const selected = this.apDate;
 
       this.apReady = false;
@@ -403,6 +524,7 @@ window.incomeAppointmentWeek = function(base) {
       if (!this.awPositioned) {
         this.awPositioned = true;
         this.awScroll();
+        await this.awLoadWork(alive);
       }
     },
 
@@ -432,14 +554,28 @@ window.incomeAppointmentWeek = function(base) {
       });
     },
 
-    awCreate(date = this.awSafeDate(), time = '09:00') {
+    awCreate(
+      date = this.awSafeDate(),
+      time = '09:00',
+      clinicId = ''
+    ) {
       if (this.apBusy || this.loading || !this.session) return;
 
       this.apNew();
+
       this.apForm.date = date;
       this.apForm.start = time;
-      this.apSetEnd();
 
+      if (
+        clinicId !== '' &&
+        clinicId !== null &&
+        clinicId !== undefined
+      ) {
+        this.apForm.clinic_id = String(clinicId);
+      }
+
+      // 沿用原本預約類型的時長，不使用整段更次作預約長度。
+      this.apSetEnd();
       this.awShowEditor();
     },
 
