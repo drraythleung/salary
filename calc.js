@@ -30,7 +30,13 @@ const Calc = (() => {
           (!o.clinic_id || o.clinic_id === r.clinic_id) && (o.block === 'all' || o.block === r.block));
         const cancel = ovs.find(o => o.action === 'cancel');
         const work = ovs.find(o => o.action === 'work');
-        const base = { date, clinic_id: r.clinic_id, block: r.block };
+        const base = {
+          date,
+          clinic_id: r.clinic_id,
+          block: r.block,
+          start_time: r.start_time,
+          end_time: r.end_time
+        };
 
         if (cancel) { skipped.push({ ...base, why: 'cancel', reason: '已取消' + (cancel.note ? `(${cancel.note})` : ''), ov_id: cancel.id }); continue; }
         if (hol && !work) { skipped.push({ ...base, why: 'holiday', reason: hol }); continue; }
